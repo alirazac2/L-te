@@ -1,0 +1,96 @@
+{
+  "username": "bilal",
+  "name": "M bilal",
+  "bio": "WEB3 explorer / dev EVM , blockchain ",
+  "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+  "theme": {
+    "background": "bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900",
+    "cardBg": "bg-white/10 backdrop-blur-md",
+    "textPrimary": "text-white",
+    "textSecondary": "text-gray-300",
+    "accent": "bg-gradient-to-r from-purple-500 to-pink-500"
+  },
+  "socialLinks": [
+    {
+      "platform": "github",
+      "url": "https://github.com/johnsmith",
+      "icon": "Telegram"
+    },
+    {
+      "platform": "linkedin",
+      "url": "https://linkedin.com/in/johnsmith",
+      "icon": "linkedin"
+    },
+    {
+      "platform": "twitter",
+      "url": "https://twitter.com/johnsmith",
+      "icon": "twitter"
+    },
+    {
+      "platform": "instagram",
+      "url": "https://instagram.com/johnsmith",
+      "icon": "instagram"
+    }
+  ],
+  "links": [
+    {
+      "title": "My Portfolio",
+      "url": "https://johnsmith.dev",
+      "icon": "globe",
+      "description": "Check out my latest work"
+    },
+    {
+      "title": "Blog",
+      "url": "https://blog.johnsmith.dev",
+      "icon": "book-open",
+      "description": "Tech articles and tutorials"
+    },
+    {
+      "title": "Email Me",
+      "url": "mailto:john@example.com",
+      "icon": "envelope",
+      "description": "Get in touch"
+    },
+    {
+      "title": "My Projects",
+      "url": "#projects",
+      "icon": "folder",
+      "description": "View my latest work"
+    },
+    {
+      "title": "GitHub Banner",
+      "url": "https://github.com/johnsmith",
+      "icon": "github",
+      "description": "Follow me on GitHub"
+    },
+    {
+      "title": "LinkedIn Profile",
+      "url": "https://linkedin.com/in/johnsmith",
+      "icon": "linkedin",
+      "description": "Connect with me professionally"
+    }
+  ],
+  "projects": [
+    {
+      "title": "E-Commerce Platform",
+      "description": "Full-stack e-commerce solution built with Next.js and Stripe",
+      "tech": ["Next.js", "TypeScript", "Stripe", "PostgreSQL"],
+      "url": "https://github.com/johnsmith/ecommerce",
+      "image": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=200&fit=crop"
+    },
+    {
+      "title": "Task Management App",
+      "description": "Collaborative task manager with real-time updates",
+      "tech": ["React", "Node.js", "Socket.io", "MongoDB"],
+      "url": "https://github.com/johnsmith/taskmanager",
+      "image": "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=400&h=200&fit=crop"
+    },
+    {
+      "title": "Weather Dashboard",
+      "description": "Beautiful weather app with location-based forecasts",
+      "tech": ["Vue.js", "OpenWeather API", "Chart.js"],
+      "url": "https://github.com/johnsmith/weather-app",
+      "image": "https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?w=400&h=200&fit=crop"
+    }
+  ]
+}

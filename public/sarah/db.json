@@ -1,0 +1,102 @@
+{
+  "username": "sarah",
+  "name": "Sarah Johnson",
+  "bio": "UI/UX Designer & Creative Director",
+  "avatar": "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
+  "theme": {
+    "background": "bg-gradient-to-br from-pink-900 via-rose-900 to-orange-900",
+    "cardBg": "bg-white/10 backdrop-blur-md",
+    "textPrimary": "text-white",
+    "textSecondary": "text-gray-300",
+    "accent": "bg-gradient-to-r from-pink-500 to-orange-500"
+  },
+  "socialLinks": [
+    {
+      "platform": "dribbble",
+      "url": "https://dribbble.com/sarahjohnson",
+      "icon": "Dribbble"
+    },
+    {
+      "platform": "behance",
+      "url": "https://behance.net/sarahjohnson",
+      "icon": "Behance"
+    },
+    {
+      "platform": "instagram",
+      "url": "https://instagram.com/sarahdesigns",
+      "icon": "Instagram"
+    },
+    {
+      "platform": "linkedin",
+      "url": "https://linkedin.com/in/sarahjohnson",
+      "icon": "Linkedin"
+    }
+  ],
+  "links": [
+    {
+      "title": "Design Portfolio",
+      "url": "https://sarahjohnson.design",
+      "icon": "Palette",
+      "description": "My creative work showcase"
+    },
+    {
+      "title": "Design System",
+      "url": "https://sarahjohnson.design/system",
+      "icon": "Layout",
+      "description": "UI components library"
+    },
+    {
+      "title": "Contact",
+      "url": "mailto:sarah@example.com",
+      "icon": "Mail",
+      "description": "Let's work together"
+    },
+    {
+      "title": "My Projects",
+      "url": "#projects",
+      "icon": "Folder",
+      "description": "View my design work"
+    },
+    {
+      "title": "Dribbble Portfolio",
+      "url": "https://dribbble.com/sarahjohnson",
+      "icon": "Dribbble",
+      "description": "My design shots"
+    },
+    {
+      "title": "Instagram Creative",
+      "url": "https://instagram.com/sarahdesigns",
+      "icon": "Instagram",
+      "description": "Behind the scenes content"
+    },
+    {
+      "title": "John's Profile",
+      "url": "/john",
+      "icon": "User",
+      "description": "Check out my developer friend"
+    }
+  ],
+  "projects": [
+    {
+      "title": "Mobile Banking App",
+      "description": "Complete UI/UX design for a modern banking application",
+      "tech": ["Figma", "Prototyping", "User Research"],
+      "url": "https://dribbble.com/shots/banking-app",
+      "image": "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=200&fit=crop"
+    },
+    {
+      "title": "E-learning Platform",
+      "description": "Educational platform design with focus on accessibility",
+      "tech": ["Adobe XD", "User Testing", "Wireframing"],
+      "url": "https://behance.net/gallery/elearning",
+      "image": "https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=400&h=200&fit=crop"
+    },
+    {
+      "title": "Brand Identity System",
+      "description": "Complete brand redesign for tech startup",
+      "tech": ["Illustrator", "Brand Strategy", "Logo Design"],
+      "url": "https://behance.net/gallery/brand-identity",
+      "image": "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=200&fit=crop"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "username": "jak",
+  "name": "Mike Chen",
+  "bio": "Content Creator & Digital Marketer",
+  "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
+  "theme": {
+    "background": "bg-gradient-to-br from-green-900 via-teal-900 to-cyan-900",
+    "cardBg": "bg-white/10 backdrop-blur-md",
+    "textPrimary": "text-white",
+    "textSecondary": "text-gray-300",
+    "accent": "bg-gradient-to-r from-green-500 to-cyan-500"
+  },
+  "socialLinks": [
+    {
+      "platform": "youtube",
+      "url": "https://youtube.com/@mikechen",
+      "icon": "Youtube"
+    },
+    {
+      "platform": "tiktok",
+      "url": "https://tiktok.com/@mikechen",
+      "icon": "Music"
+    },
+    {
+      "platform": "instagram",
+      "url": "https://instagram.com/mikechenofficial",
+      "icon": "Instagram"
+    },
+    {
+      "platform": "twitter",
+      "url": "https://twitter.com/mikechentech",
+      "icon": "Twitter"
+    }
+  ],
+  "links": [
+    {
+      "title": "YouTube Channel",
+      "url": "https://youtube.com/@mikechen",
+      "icon": "Play",
+      "description": "Tech reviews and tutorials"
+    },
+    {
+      "title": "Newsletter",
+      "url": "https://mikechen.substack.com",
+      "icon": "Mail",
+      "description": "Weekly tech insights"
+    },
+    {
+      "title": "Courses",
+      "url": "https://mikechen.teachable.com",
+      "icon": "GraduationCap",
+      "description": "Learn digital marketing"
+    },
+    {
+      "title": "My Projects",
+      "url": "#projects",
+      "icon": "Folder",
+      "description": "View my content work"
+    },
+    {
+      "title": "YouTube Channel",
+      "url": "https://youtube.com/@mikechen",
+      "icon": "Youtube",
+      "description": "Subscribe for tech content"
+    },
+    {
+      "title": "TikTok Videos",
+      "url": "https://tiktok.com/@mikechen",
+      "icon": "Music",
+      "description": "Quick tech tips"
+    },
+    {
+      "title": "Sarah's Design Work",
+      "url": "/sarah",
+      "icon": "Palette",
+      "description": "Amazing designer I work with"
+    },
+    {
+      "title": "Collaboration Inquiry",
+      "url": "mailto:mike@example.com",
+      "icon": "Handshake",
+      "description": "Business partnerships"
+    }
+  ],
+  "projects": [
+    {
+      "title": "Tech Review Series",
+      "description": "Comprehensive reviews of latest gadgets and software",
+      "tech": ["Video Production", "After Effects", "Premiere Pro"],
+      "url": "https://youtube.com/playlist?list=tech-reviews",
+      "image": "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=200&fit=crop"
+    },
+    {
+      "title": "Digital Marketing Course",
+      "description": "Complete guide to modern digital marketing strategies",
+      "tech": ["Course Creation", "Marketing Strategy", "Analytics"],
+      "url": "https://mikechen.teachable.com/marketing-course",
+      "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=200&fit=crop"
+    },
+    {
+      "title": "Brand Collaboration Hub",
+      "description": "Platform connecting creators with brands",
+      "tech": ["Community Building", "Partnership Management"],
+      "url": "https://brandcollab.mikechen.com",
+      "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=200&fit=crop"
+    }
+  ]
+}
