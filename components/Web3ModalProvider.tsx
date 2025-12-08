@@ -1,87 +1,66 @@
-'use client';
+"use client";
 
-import { createAppKit } from '@reown/appkit/react';
-import { Ethers5Adapter } from '@reown/appkit-adapter-ethers5';
-import { ReactNode } from 'react';
+import { createContext, ReactNode } from "react";
+import { createAppKit } from "@reown/appkit/react";
+import { mainnet } from "@reown/appkit/networks";
+import { Ethers5Adapter } from "@reown/appkit-adapter-ethers5";
 
-// 1. Project ID
-const projectId = '2bc09c8e71b33c16f19263c1c79f7a69';
+// ---------------------
+// 🔥 Fixed KiteAI Testnet Chain
+// ---------------------
+export const kiteAI = {
+  id: 2368,
+  caipNetworkId: "eip155:2368",
+  chainNamespace: "eip155",
 
-// 2. Networks in correct AppKit format
-
-// ------- MAINNET -------
-const mainnet = {
-  chainId: 1,
-  name: 'Ethereum',
-  chainNamespace: 'eip155' as const,
-  nativeCurrency: {
-    name: 'Ether',
-    symbol: 'ETH',
-    decimals: 18
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://cloudflare-eth.com']
-    }
-  },
-  blockExplorers: {
-    default: {
-      name: 'Etherscan',
-      url: 'https://etherscan.io'
-    }
-  }
-};
-
-// ------- KITEAI TESTNET -------
-const kiteAI = {
   chainId: 2368,
-  name: 'KiteAI Testnet',
-  chainNamespace: 'eip155' as const,
-
+  name: "KiteAI Testnet",
   nativeCurrency: {
-    name: 'KiteAI',
-    symbol: 'KITE',
-    decimals: 18
+    name: "KAI",
+    symbol: "KAI",
+    decimals: 18,
   },
-
   rpcUrls: {
     default: {
-      http: ['https://rpc-testnet.gokite.ai']
-    }
+      http: ["https://rpc-testnet.gokite.ai/"],
+    },
   },
-
   blockExplorers: {
     default: {
-      name: 'KiteScan',
-      url: 'https://testnet.kitescan.ai'
-    }
-  }
+      name: "KiteAI Explorer",
+      url: "https://explorer.gokite.ai/",
+    },
+  },
 };
 
-// 3. Wallet metadata
+// ---------------------
+
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+
+if (!projectId) {
+  throw new Error("❌ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID missing in .env");
+}
+
+// Metadata
 const metadata = {
-  name: 'ZK3 Bio',
-  description: 'Professional Link in Bio with Web3 Features',
-  url: 'https://zk3-bio.vercel.app',
-  icons: ['https://avatars.githubusercontent.com/u/37784886']
+  name: "ZK3.xyz",
+  description: "ZK3.xyz Web3 App",
+  url: "https://zk3.xyz",
+  icons: ["https://zk3.xyz/icon.png"],
 };
 
-// 4. Initialize AppKit
-try {
+export function Web3ModalProvider({ children }: { children: ReactNode }) {
+  // Initialize Web3Modal AppKit
   createAppKit({
     adapters: [new Ethers5Adapter()],
+
+    // IMPORTANT: Fixed networks array
     networks: [mainnet, kiteAI],
+
     defaultNetwork: kiteAI,
     metadata,
     projectId,
-    features: {
-      analytics: true
-    }
   });
-} catch (error) {
-  console.warn('AppKit initialization failed locally:', error);
-}
 
-export default function Web3ModalProvider({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
