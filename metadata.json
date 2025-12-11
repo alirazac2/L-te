@@ -1,5 +1,5 @@
 {
-  "name": "ZK3 Based",
+  "name": "Copy of ZK3 Based",
   "description": "An on-chain AI agent capable of reading balances, checking block heights, and drafting transactions on Base Mainnet and Base Sepolia using Gemini 2.5.",
   "requestFramePermissions": []
 }

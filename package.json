@@ -1,5 +1,5 @@
 {
-  "name": "zk3-based",
+  "name": "copy-of-zk3-based",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -15,7 +15,9 @@
     "ethers": "5.7.2",
     "@reown/appkit": "^1.8.14",
     "@reown/appkit-adapter-ethers5": "^1.8.14",
-    "marked": "15.0.0"
+    "marked": "15.0.0",
+    "vite": "^7.2.7",
+    "@vitejs/plugin-react": "^5.1.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
