@@ -1,5 +1,5 @@
 {
-  "name": "TaskFlow Pro",
-  "description": "A comprehensive task management application featuring project organization, integrated timers, link management with in-app previews, and customizable notifications.",
+  "name": "ZK3 Based",
+  "description": "An on-chain AI agent capable of reading balances, checking block heights, and drafting transactions on Base Mainnet and Base Sepolia using Gemini 2.5.",
   "requestFramePermissions": []
 }

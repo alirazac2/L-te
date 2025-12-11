@@ -1,5 +1,5 @@
 {
-  "name": "taskflow-pro",
+  "name": "zk3-based",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,9 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.560.0",
+    "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "react": "^19.2.1"
+    "@google/genai": "^1.31.0",
+    "ethers": "5.7.2",
+    "@reown/appkit": "^1.8.14",
+    "@reown/appkit-adapter-ethers5": "^1.8.14",
+    "marked": "15.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

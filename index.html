@@ -3,97 +3,50 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TaskFlow Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>ZK3 Based</title>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
       body {
         font-family: 'Inter', sans-serif;
+        background-color: #030712;
+        color: #f9fafb;
       }
-      /* Custom Scrollbar */
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+      /* Custom scrollbar for chat */
       ::-webkit-scrollbar {
         width: 8px;
-        height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #f1f1f1; 
+        background: #111827; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #d1d5db; 
+        background: #374151; 
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #9ca3af; 
-      }
-
-      /* Animations */
-      @keyframes slideInUp {
-        from {
-          transform: translateY(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-      
-      @keyframes scaleIn {
-        from {
-          transform: scale(0.9);
-          opacity: 0;
-        }
-        to {
-          transform: scale(1);
-          opacity: 1;
-        }
-      }
-
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-
-      @keyframes fadeInUp {
-        from {
-          transform: translateY(20px);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-
-      .animate-slide-in-up {
-        animation: slideInUp 0.3s ease-out forwards;
-      }
-      
-      .animate-scale-in {
-        animation: scaleIn 0.2s ease-out forwards;
-      }
-
-      .animate-fade-in {
-        animation: fadeIn 0.2s ease-out forwards;
-      }
-
-      .animate-fade-in-up {
-        animation: fadeInUp 0.3s ease-out forwards;
+        background: #4b5563; 
       }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.560.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
-    "react/": "https://esm.sh/react@^19.2.1/",
-    "react": "https://esm.sh/react@^19.2.1"
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
+    "ethers": "https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.esm.min.js",
+    "@reown/appkit/": "https://aistudiocdn.com/@reown/appkit@^1.8.14/",
+    "@reown/appkit-adapter-ethers5": "https://aistudiocdn.com/@reown/appkit-adapter-ethers5@^1.8.14",
+    "marked": "https://cdn.jsdelivr.net/npm/marked@15.0.0/lib/marked.esm.js"
   }
 }
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-slate-50 text-slate-900 overflow-hidden">
+  <body>
     <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

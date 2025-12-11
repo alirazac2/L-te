@@ -1,49 +1,54 @@
-export interface LinkItem {
+
+export enum Role {
+  USER = 'user',
+  MODEL = 'model',
+  SYSTEM = 'system'
+}
+
+export interface ChatMessage {
   id: string;
-  url: string;
+  role: Role;
+  content: string;
+  isLoading?: boolean;
+  timestamp: number;
+}
+
+export interface ContractMetadata {
+  address: string;
+  abi: any[];
+  sourceCode: string;
+  deployedAt: number;
+}
+
+export interface ChatSession {
+  id: string;
   title: string;
+  messages: ChatMessage[];
+  updatedAt: number;
+  contractData?: ContractMetadata; // Stores the single contract allowed per session
+  type?: 'chat' | 'zbaso'; // Distinguish session type
 }
 
-export interface NotificationConfig {
-  enabled: boolean;
-  notifyAtTime: boolean;
-  notifyBeforeMinutes: number | null; // e.g., 15 minutes before
+export interface ChainConfig {
+  chainId: string; // Hex string, e.g., '0x2105'
+  chainName: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+  };
+  rpcUrls: string[];
+  blockExplorerUrls: string[];
 }
 
-export interface Task {
-  id: string;
-  title: string;
-  description: string;
-  project: string;
-  links: LinkItem[];
-  dueDate: string | null; // ISO string
-  completed: boolean;
-  createdAt: string;
-  notificationConfig: NotificationConfig;
-  timeSpentSeconds: number; // For the timer feature
+export type WalletState = {
+  address: string | null;
+  chainId: string | null;
+  isConnected: boolean;
+};
+
+// Tool types
+export interface TransactionRequest {
+  to: string;
+  value: string; // in ETH string
 }
-
-export interface Project {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export type FilterType = 'all' | 'today' | 'upcoming' | 'completed';
-
-export const COLORS = [
-  'bg-red-500',
-  'bg-orange-500',
-  'bg-amber-500',
-  'bg-green-500',
-  'bg-emerald-500',
-  'bg-teal-500',
-  'bg-cyan-500',
-  'bg-blue-500',
-  'bg-indigo-500',
-  'bg-violet-500',
-  'bg-purple-500',
-  'bg-fuchsia-500',
-  'bg-pink-500',
-  'bg-rose-500',
-];
