@@ -7,6 +7,7 @@ import { useAppKitAccount, useAppKitProvider, useAppKitNetwork } from "@reown/ap
 import { DefaultChatView } from './components/DefaultChatView';
 import { WalletConnect } from './components/WalletConnect';
 import { ZbasoView } from './components/ZbasoView';
+import { TestPage } from './components/TestPage'; // Import Test Page
 import { ChatMessage, Role, ChatSession, ContractMetadata } from './types';
 import * as GeminiService from './services/geminiService';
 import * as ZbasoService from './services/zbasoService';
@@ -19,6 +20,7 @@ const App: React.FC = () => {
 
   // --- View State (Routing) ---
   const [currentView, setCurrentView] = useState<'chat' | 'zbaso'>('chat');
+  const [isTestMode, setIsTestMode] = useState(false); // Flag for isolated test page
 
   // --- State Management ---
   
@@ -54,6 +56,9 @@ const App: React.FC = () => {
   // Ensure active session ID is valid for the current view, otherwise switch
   useEffect(() => {
      // We only check this if sessions change significantly (length check to avoid deep loop) or view changes
+     // We SKIP this check if we are in Test Mode
+     if (isTestMode) return;
+
      const activeSession = sessions.find(s => s.id === activeSessionId);
      const activeType = activeSession?.type || 'chat';
      
@@ -76,7 +81,7 @@ const App: React.FC = () => {
              setActiveSessionId(newId);
          }
      }
-  }, [currentView, activeSessionId]); // Removed 'sessions' from dep array to prevent loop, logic handles internal consistency
+  }, [currentView, activeSessionId, isTestMode]); 
 
   // 3. Messages: The UI state for the CURRENT view.
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -120,10 +125,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkUrl = () => {
         const path = window.location.pathname;
-        if (path.includes('/zbaseo')) {
-            setCurrentView('zbaso');
+        if (path === '/test') {
+            setIsTestMode(true);
         } else {
-            setCurrentView('chat');
+            setIsTestMode(false);
+            if (path.includes('/zbaseo')) {
+                setCurrentView('zbaso');
+            } else {
+                setCurrentView('chat');
+            }
         }
     };
     
@@ -134,7 +144,7 @@ const App: React.FC = () => {
 
   // Initialize Gemini for the current session context (Only for 'chat' view)
   useEffect(() => {
-    if (currentView !== 'chat') return;
+    if (currentView !== 'chat' || isTestMode) return;
 
     const ai = GeminiService.createGeminiClient();
     
@@ -171,10 +181,12 @@ const App: React.FC = () => {
       },
     });
     setChatSession(chat);
-  }, [activeSessionId, sessions, currentView]); 
+  }, [activeSessionId, sessions, currentView, isTestMode]); 
 
   // Sync Messages -> Active Session -> Local Storage
   useEffect(() => {
+    if (isTestMode) return;
+
     setSessions(prevSessions => {
       const updatedSessions = prevSessions.map(session => {
         if (session.id === activeSessionId) {
@@ -203,7 +215,7 @@ const App: React.FC = () => {
       localStorage.setItem('chat_sessions', JSON.stringify(updatedSessions));
       return updatedSessions;
     });
-  }, [messages, activeSessionId]);
+  }, [messages, activeSessionId, isTestMode]);
 
   // --- Handlers ---
 
@@ -591,6 +603,11 @@ const App: React.FC = () => {
     if (openMenuId) document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [openMenuId]);
+
+  // --- RENDER: Test Page (Early Exit) ---
+  if (isTestMode) {
+      return <TestPage />;
+  }
 
   // Filter sessions for Sidebar
   const sidebarSessions = sessions.filter(s => (s.type || 'chat') === currentView);
