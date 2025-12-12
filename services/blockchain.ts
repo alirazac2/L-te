@@ -16,11 +16,12 @@ export const connectWallet = async () => {
   if (!window.ethereum) throw new Error("No wallet found");
   
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
+  await provider.send("eth_requestAccounts", []); // Forces popup if not connected
   const signer = provider.getSigner();
   const address = await signer.getAddress();
   const network = await provider.getNetwork();
 
+  // Validate Chain
   if (network.chainId !== kiteAI.chainId) {
     try {
       await window.ethereum.request({
@@ -49,7 +50,33 @@ export const connectWallet = async () => {
     }
   }
 
+  // Persist connection state
+  localStorage.setItem('bioLinkerWalletConnected', 'true');
+
   return { provider, signer, address };
+};
+
+/**
+ * Checks if wallet was previously connected and tries to reconnect silently.
+ */
+export const checkWalletConnection = async () => {
+    const wasConnected = localStorage.getItem('bioLinkerWalletConnected') === 'true';
+    if (!wasConnected || !window.ethereum) return null;
+
+    try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        // Get accounts without prompting popup
+        const accounts = await provider.listAccounts(); 
+        
+        if (accounts.length > 0) {
+            const signer = provider.getSigner();
+            const address = accounts[0];
+            return { provider, signer, address };
+        }
+    } catch (e) {
+        console.warn("Silent connect failed", e);
+    }
+    return null;
 };
 
 export const getProfileHubContract = (signerOrProvider: ethers.Signer | ethers.providers.Provider) => {

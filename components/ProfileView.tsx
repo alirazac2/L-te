@@ -111,19 +111,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
             {/* Profile Header */}
             <header className="flex flex-col items-center mb-10 w-full z-10">
                 <div className="relative mb-6">
-                    <div className="w-28 h-28 rounded-full overflow-hidden shadow-2xl ring-4 ring-white/10 dark:ring-white/5 bg-gray-200">
-                         {profile.avatarUrl ? (
-                            <img 
-                                src={profile.avatarUrl} 
-                                alt={profile.displayName} 
-                                className="w-full h-full object-cover"
-                            />
-                         ) : (
-                             <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-3xl font-bold">
-                                 {profile.displayName.charAt(0)}
-                             </div>
-                         )}
-                    </div>
+                    <AvatarWithSkeleton 
+                        src={profile.avatarUrl} 
+                        alt={profile.displayName} 
+                        fallbackChar={profile.displayName.charAt(0)} 
+                    />
                 </div>
 
                 <div className="text-center space-y-2 max-w-sm w-full px-4">
@@ -247,37 +239,108 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
   );
 };
 
+// --- Helper Components ---
+
+const AvatarWithSkeleton: React.FC<{ src: string; alt: string; fallbackChar: string }> = ({ src, alt, fallbackChar }) => {
+    const [isLoading, setIsLoading] = useState(true);
+
+    return (
+        <div className="w-28 h-28 rounded-full overflow-hidden shadow-2xl ring-4 ring-white/10 dark:ring-white/5 bg-gray-200 relative">
+            {src ? (
+                <>
+                    <img 
+                        src={src} 
+                        alt={alt} 
+                        className={`w-full h-full object-cover transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                        onLoad={() => setIsLoading(false)}
+                    />
+                    {isLoading && (
+                        <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+                            {/* Optional: Add a subtle placeholder icon or text inside skeleton if needed */}
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-3xl font-bold">
+                    {fallbackChar}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // --- Profile Skeleton Component ---
 
 const ProfileSkeleton: React.FC = () => {
     return (
-      <div className="min-h-screen w-full flex justify-center bg-gray-50">
+      <div className="min-h-screen w-full flex justify-center bg-white">
         <div className="w-full max-w-[600px] px-6 py-12 md:py-16 flex flex-col items-center animate-pulse">
             
-            {/* Header Skeleton */}
-            <div className="flex flex-col items-center mb-10 w-full">
-                <div className="w-28 h-28 rounded-full bg-gray-200 mb-6" />
-                <div className="h-8 w-48 bg-gray-200 rounded-lg mb-3" />
-                <div className="h-4 w-64 bg-gray-200 rounded-lg mb-8" />
+            {/* Header Section */}
+            <div className="flex flex-col items-center mb-10 w-full relative">
+                {/* Avatar */}
+                <div className="w-28 h-28 rounded-full bg-gray-200 mb-6 shadow-sm ring-4 ring-gray-50" />
                 
-                {/* Socials Skeleton */}
+                {/* Name */}
+                <div className="h-7 w-40 bg-gray-200 rounded-full mb-4" />
+                
+                {/* Bio lines */}
+                <div className="space-y-2 w-full max-w-[250px] flex flex-col items-center mb-8">
+                    <div className="h-2.5 w-full bg-gray-100 rounded-full" />
+                    <div className="h-2.5 w-3/4 bg-gray-100 rounded-full" />
+                </div>
+                
+                {/* Social Icons */}
                 <div className="flex gap-3">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="w-11 h-11 rounded-full bg-gray-200" />
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="w-11 h-11 rounded-full bg-gray-100" />
                     ))}
                 </div>
             </div>
 
-            {/* Links Skeleton */}
+            {/* Links Section */}
             <div className="w-full space-y-4">
-                {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="w-full h-[72px] rounded-[1.25rem] bg-gray-200" />
+                {/* Featured Card Skeleton (Larger) */}
+                <div className="w-full aspect-[2/1] rounded-2xl bg-gray-200 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                    <div className="absolute bottom-5 left-5 right-5 space-y-3">
+                         <div className="h-5 w-1/2 bg-gray-300 rounded-lg" />
+                         <div className="h-3 w-3/4 bg-gray-300/50 rounded-lg" />
+                    </div>
+                </div>
+
+                {/* Standard Link Skeletons */}
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="w-full h-[76px] rounded-[1.25rem] bg-gray-50 border border-gray-100 flex items-center px-4 justify-between">
+                         <div className="flex items-center gap-4 w-full">
+                            <div className="w-10 h-10 rounded-lg bg-gray-200 shrink-0" />
+                            <div className="flex-1 space-y-2.5">
+                                <div className="h-3.5 w-1/3 bg-gray-200 rounded-full" />
+                                <div className="h-2.5 w-1/4 bg-gray-100 rounded-full" />
+                            </div>
+                         </div>
+                         <div className="w-5 h-5 rounded-full bg-gray-100 shrink-0" />
+                    </div>
                 ))}
             </div>
 
-            {/* Project Card Skeleton */}
-             <div className="w-full mt-12">
-                 <div className="w-full h-24 rounded-[1.5rem] bg-gray-200" />
+            {/* Projects Section Skeleton */}
+             <div className="w-full mt-10">
+                <div className="flex items-center gap-4 mb-6 px-4 opacity-50">
+                    <div className="h-px bg-gray-200 flex-1" />
+                    <div className="h-2 w-16 bg-gray-200 rounded-full" />
+                    <div className="h-px bg-gray-200 flex-1" />
+                </div>
+                 <div className="w-full h-28 rounded-[1.3rem] bg-gray-50 border border-gray-100 p-5 flex items-center justify-between">
+                      <div className="flex items-center gap-5">
+                          <div className="w-14 h-14 rounded-2xl bg-gray-200" />
+                          <div className="space-y-2.5">
+                               <div className="h-4 w-32 bg-gray-200 rounded-full" />
+                               <div className="h-2.5 w-20 bg-gray-100 rounded-full" />
+                          </div>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-gray-100" />
+                 </div>
              </div>
 
         </div>

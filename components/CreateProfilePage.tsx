@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ProfileView from './ProfileView';
 import { UserProfile, ThemeType, SocialPlatform, LinkItem, ProjectItem, ProfileTheme } from '../types';
-import { UploadCloud, Plus, Trash2, Eye, Save, ArrowLeft, RefreshCw, X, Edit2, Check, ExternalLink, ChevronDown, ChevronUp, Search, Smartphone, Palette, Wallet, Loader2, UserPlus, Lock } from 'lucide-react';
+import { UploadCloud, Plus, Trash2, Eye, Save, ArrowLeft, RefreshCw, X, Edit2, Check, ExternalLink, ChevronDown, ChevronUp, Search, Smartphone, Palette, Wallet, Loader2, UserPlus, Lock, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSocialIcon, getGenericIcon, ICON_OPTIONS } from './Icons';
-import { connectWallet, publishProfile, getProfileAddress, getUsernameByWallet, fetchProfileDataOnChain } from '../services/blockchain';
+import { connectWallet, publishProfile, getProfileAddress, getUsernameByWallet, fetchProfileDataOnChain, checkWalletConnection } from '../services/blockchain';
+import { Toast, ToastType } from './Toast';
 
 // --- Constants & Helpers ---
 
@@ -33,11 +34,24 @@ const SOCIAL_BASE_URLS: Record<SocialPlatform, string> = {
     [SocialPlatform.Email]: 'mailto:',
 };
 
-const INPUT_CLASS = "w-full px-3 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-gray-400 text-sm";
+const INPUT_CLASS = "w-full px-3 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-gray-400 text-sm disabled:bg-gray-100 disabled:text-gray-500";
+const INPUT_ERROR_CLASS = "w-full px-3 py-2.5 bg-white text-gray-900 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-500 outline-none transition-all placeholder-gray-400 text-sm";
 const LABEL_CLASS = "block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5";
 const SECTION_TITLE_CLASS = "text-xs font-bold uppercase tracking-widest text-gray-400 mb-4";
 const MODAL_OVERLAY_CLASS = "fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in";
 const MODAL_CONTENT_CLASS = "bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-slide-up relative";
+
+// --- Helpers ---
+
+const isValidUrl = (string: string) => {
+    if (!string) return true; // Optional fields can be empty
+    try {
+        new URL(string);
+        return true;
+    } catch (_) {
+        return false;
+    }
+};
 
 // --- Types for Modal State ---
 
@@ -51,18 +65,24 @@ interface ModalState {
 
 const CreateProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  // Store initial profile as string for easy deep comparison
+  const [initialProfileJson, setInitialProfileJson] = useState<string>(JSON.stringify(DEFAULT_PROFILE));
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   
   // Wallet & Auth State
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [signer, setSigner] = useState<any>(null);
   const [hasRegisteredProfile, setHasRegisteredProfile] = useState(false);
-  const [isCheckingWallet, setIsCheckingWallet] = useState(false);
+  const [isCheckingWallet, setIsCheckingWallet] = useState(true); // Start checking immediately
   
   // Publishing State
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishStatus, setPublishStatus] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+
+  // Validation State
+  const [identityErrors, setIdentityErrors] = useState<Record<string, string>>({});
+  const [modalErrors, setModalErrors] = useState<Record<string, string>>({});
 
   // Modal State
   const [modal, setModal] = useState<ModalState>({ type: null, index: null, data: null });
@@ -70,12 +90,40 @@ const CreateProfilePage: React.FC = () => {
   // UI State for specific interactions
   const [showPlatformDropdown, setShowPlatformDropdown] = useState(false);
   const [showCustomColors, setShowCustomColors] = useState(false);
-  
-  // Icon Picker State
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
 
+  // Toast State
+  const [toast, setToast] = useState<{ msg: string; type: ToastType; visible: boolean }>({
+    msg: '', type: 'info', visible: false
+  });
+
+  const showToast = (msg: string, type: ToastType = 'info') => {
+      setToast({ msg, type, visible: true });
+  };
+
+  // Derived Dirty State
+  const isDirty = useMemo(() => {
+      return JSON.stringify(profile) !== initialProfileJson;
+  }, [profile, initialProfileJson]);
+
   // --- Wallet & Initial Load ---
+
+  useEffect(() => {
+      // Auto-connect on mount if previously connected
+      const init = async () => {
+          setIsCheckingWallet(true);
+          const conn = await checkWalletConnection();
+          if (conn) {
+              setWalletAddress(conn.address);
+              setSigner(conn.signer);
+              await checkUserRegistration(conn.address);
+          } else {
+              setIsCheckingWallet(false);
+          }
+      };
+      init();
+  }, []);
 
   const handleConnect = async () => {
       try {
@@ -84,7 +132,7 @@ const CreateProfilePage: React.FC = () => {
           setSigner(s);
           checkUserRegistration(address);
       } catch (e) {
-          alert("Failed to connect wallet: " + (e as any).message);
+          showToast("Failed to connect wallet", "error");
       }
   };
 
@@ -98,13 +146,17 @@ const CreateProfilePage: React.FC = () => {
               const data = await fetchProfileDataOnChain(existingUsername);
               if (data) {
                   setProfile(data);
+                  setInitialProfileJson(JSON.stringify(data));
               } else {
                   // Fallback if data is corrupted but username exists
-                  setProfile(p => ({...p, username: existingUsername}));
+                  const recoveryProfile = {...DEFAULT_PROFILE, username: existingUsername};
+                  setProfile(recoveryProfile);
+                  setInitialProfileJson(JSON.stringify(recoveryProfile));
               }
           } else {
               setHasRegisteredProfile(false);
               setProfile(DEFAULT_PROFILE);
+              setInitialProfileJson(JSON.stringify(DEFAULT_PROFILE));
           }
       } catch (e) {
           console.error(e);
@@ -119,15 +171,25 @@ const CreateProfilePage: React.FC = () => {
     setProfile(prev => {
         const newState = { ...prev, [field]: value };
         if (field === 'username') {
+             // Strict username validation: remove spaces and special chars immediately
              const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, '');
              newState.username = clean;
-             // Only check username availability if we are in registration mode
+             
              if (!hasRegisteredProfile) {
                  checkUsername(clean);
              }
         }
         return newState;
     });
+
+    // Real-time Validation for Identity Fields
+    if (field === 'avatarUrl') {
+        if (value && !isValidUrl(value)) {
+            setIdentityErrors(prev => ({ ...prev, avatarUrl: "Please enter a valid URL (https://...)" }));
+        } else {
+            setIdentityErrors(prev => { const n = { ...prev }; delete n.avatarUrl; return n; });
+        }
+    }
   };
 
   // Debounced check for username (only for new users)
@@ -136,6 +198,8 @@ const CreateProfilePage: React.FC = () => {
       const timer = setTimeout(() => {
           if (profile.username.length > 2) {
               checkUsername(profile.username);
+          } else {
+              setUsernameStatus('idle');
           }
       }, 800);
       return () => clearTimeout(timer);
@@ -172,6 +236,7 @@ const CreateProfilePage: React.FC = () => {
           if (type === 'social') newData.socials = prev.socials.filter((_, i) => i !== index);
           return newData;
       });
+      showToast("Item deleted", "info");
   };
 
   const moveItem = (type: 'link' | 'project' | 'social', index: number, direction: 'up' | 'down') => {
@@ -198,6 +263,7 @@ const CreateProfilePage: React.FC = () => {
   const openModal = (type: ModalType, index: number | null) => {
       let data = {};
       setShowPlatformDropdown(false);
+      setModalErrors({});
 
       if (index !== null) {
           if (type === 'link') data = { ...profile.links[index] };
@@ -216,6 +282,34 @@ const CreateProfilePage: React.FC = () => {
   const saveModalData = () => {
       if (!modal.type || !modal.data) return;
 
+      const newErrors: Record<string, string> = {};
+
+      // --- Validation Logic ---
+      if (modal.type === 'link') {
+          if (!modal.data.title?.trim()) newErrors.title = "Title is required";
+          if (!modal.data.url?.trim()) newErrors.url = "URL is required";
+          else if (!isValidUrl(modal.data.url)) newErrors.url = "Invalid URL format";
+          
+          if (modal.data.featured && modal.data.thumbnail && !isValidUrl(modal.data.thumbnail)) {
+              newErrors.thumbnail = "Invalid Thumbnail URL";
+          }
+      } 
+      else if (modal.type === 'project') {
+          if (!modal.data.title?.trim()) newErrors.title = "Title is required";
+          if (modal.data.url && !isValidUrl(modal.data.url)) newErrors.url = "Invalid URL format";
+          if (modal.data.thumbnail && !isValidUrl(modal.data.thumbnail)) newErrors.thumbnail = "Invalid Thumbnail URL";
+      }
+      else if (modal.type === 'social') {
+           if (!modal.data.url?.trim()) newErrors.url = "Username or URL is required";
+           // Social handles partial inputs (usernames), so full URL validation happens on construct, but simple check here
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+          setModalErrors(newErrors);
+          return;
+      }
+
+      // --- Saving Logic ---
       setProfile(prev => {
           const newData = { ...prev };
           if (modal.type === 'link') {
@@ -245,10 +339,15 @@ const CreateProfilePage: React.FC = () => {
           return newData;
       });
       closeModal();
+      showToast("Changes saved locally", "success");
   };
 
   const updateModalData = (field: string, value: any) => {
       setModal(prev => ({ ...prev, data: { ...prev.data, [field]: value } }));
+      // Clear error for field on change
+      if (modalErrors[field]) {
+          setModalErrors(prev => { const n = {...prev}; delete n[field]; return n; });
+      }
   };
   
   const filteredIcons = ICON_OPTIONS.filter(icon => 
@@ -259,11 +358,16 @@ const CreateProfilePage: React.FC = () => {
 
   const handlePublish = async () => {
       if (!walletAddress || !signer) {
-          alert("Please connect your wallet first.");
+          showToast("Please connect your wallet first", "error");
           return;
       }
+      // Final Validation before publish
       if (!profile.username || profile.username.length < 3) {
-          alert("Username must be at least 3 characters.");
+          showToast("Username must be at least 3 characters", "error");
+          return;
+      }
+      if (Object.keys(identityErrors).length > 0) {
+          showToast("Please fix validation errors before saving", "error");
           return;
       }
 
@@ -271,17 +375,25 @@ const CreateProfilePage: React.FC = () => {
       setPublishStatus(hasRegisteredProfile ? "Updating profile..." : "Minting username...");
       
       try {
+          // Perform the chain transaction
           await publishProfile(profile.username, profile, signer, (status) => {
               setPublishStatus(status);
           });
           
+          showToast(hasRegisteredProfile ? "Profile updated successfully!" : "Profile minted successfully!", "success");
+          
+          // Update the "Clean" state so the save button disables
+          setInitialProfileJson(JSON.stringify(profile));
+
+          // Seamless transition logic
           if (!hasRegisteredProfile) {
-              setHasRegisteredProfile(true);
+              setPublishStatus("Finalizing...");
+              await checkUserRegistration(walletAddress); 
           }
-          alert("Success! Your profile is on-chain.");
+
       } catch (e: any) {
           console.error(e);
-          alert("Error publishing: " + (e.message || e));
+          showToast("Error publishing: " + (e.message || "Unknown error"), "error");
           setPublishStatus("Failed.");
       } finally {
           setIsPublishing(false);
@@ -291,10 +403,21 @@ const CreateProfilePage: React.FC = () => {
 
   // --- CONDITIONAL RENDERING ---
 
-  // 1. Not Connected
+  // 1. Loading User Status
+  if (isCheckingWallet) {
+      return (
+          <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+              <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+              <p className="text-gray-500 font-medium">Checking connection...</p>
+          </div>
+      );
+  }
+
+  // 2. Not Connected
   if (!walletAddress) {
       return (
           <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+               <Toast message={toast.msg} type={toast.type} isVisible={toast.visible} onClose={() => setToast({ ...toast, visible: false })} />
                <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-6">
                    <Wallet className="w-8 h-8" />
                </div>
@@ -313,20 +436,12 @@ const CreateProfilePage: React.FC = () => {
       );
   }
 
-  // 2. Loading User Status
-  if (isCheckingWallet) {
-      return (
-          <div className="min-h-screen bg-white flex flex-col items-center justify-center">
-              <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-              <p className="text-gray-500 font-medium">Checking your on-chain status...</p>
-          </div>
-      );
-  }
-
   // 3. Registration Mode (Connect but No Profile)
   if (!hasRegisteredProfile) {
       return (
           <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 animate-fade-in relative">
+              <Toast message={toast.msg} type={toast.type} isVisible={toast.visible} onClose={() => setToast({ ...toast, visible: false })} />
+              
               <Link to="/" className="absolute top-6 left-6 p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
                  <ArrowLeft className="w-6 h-6" />
               </Link>
@@ -360,6 +475,7 @@ const CreateProfilePage: React.FC = () => {
                                 {usernameStatus === 'taken' && <span className="text-sm font-bold text-red-500 flex items-center gap-1"><X className="w-4 h-4"/> Taken</span>}
                                 {usernameStatus === 'available' && <span className="text-sm font-bold text-green-600 flex items-center gap-1"><Check className="w-4 h-4"/> Available</span>}
                             </div>
+                            <p className="text-xs text-gray-400 mt-2">Only letters, numbers, and underscores. No spaces.</p>
                         </div>
 
                         <button 
@@ -383,6 +499,8 @@ const CreateProfilePage: React.FC = () => {
   // 4. Editor Mode (Has Profile)
   return (
     <div className="flex flex-col md:flex-row h-screen bg-white text-gray-900 overflow-hidden font-sans relative">
+        <Toast message={toast.msg} type={toast.type} isVisible={toast.visible} onClose={() => setToast({ ...toast, visible: false })} />
+
         {/* Editor Sidebar */}
         <div className={`
             w-full md:w-1/2 lg:w-5/12 h-full flex flex-col bg-white border-r border-gray-200 shadow-2xl z-20 transition-transform duration-300 ease-in-out
@@ -404,8 +522,9 @@ const CreateProfilePage: React.FC = () => {
                 <div className="flex gap-2">
                     <button 
                         onClick={handlePublish}
-                        disabled={isPublishing}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors shadow-sm disabled:opacity-70 disabled:cursor-wait"
+                        disabled={!isDirty || isPublishing || Object.keys(identityErrors).length > 0}
+                        title={!isDirty ? "No changes to save" : "Save changes"}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors shadow-sm disabled:opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                         {isPublishing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4" />}
                         <span className="hidden sm:inline">{isPublishing ? 'Saving...' : 'Save Changes'}</span>
@@ -450,9 +569,22 @@ const CreateProfilePage: React.FC = () => {
                         </div>
                         <div>
                             <label className={LABEL_CLASS}>Avatar URL</label>
-                            <div className="flex gap-2">
-                                <input type="text" value={profile.avatarUrl} onChange={e => handleIdentityChange('avatarUrl', e.target.value)} placeholder="https://..." className={INPUT_CLASS} />
-                                {profile.avatarUrl && <img src={profile.avatarUrl} className="w-10 h-10 rounded-full object-cover border border-gray-200" alt="Avatar preview" />}
+                            <div className="flex flex-col gap-1">
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        value={profile.avatarUrl} 
+                                        onChange={e => handleIdentityChange('avatarUrl', e.target.value)} 
+                                        placeholder="https://..." 
+                                        className={identityErrors.avatarUrl ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                    />
+                                    {profile.avatarUrl && isValidUrl(profile.avatarUrl) && <img src={profile.avatarUrl} className="w-10 h-10 rounded-full object-cover border border-gray-200" alt="Avatar preview" />}
+                                </div>
+                                {identityErrors.avatarUrl && (
+                                    <span className="text-xs text-red-500 font-medium flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3"/> {identityErrors.avatarUrl}
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
@@ -753,12 +885,27 @@ const CreateProfilePage: React.FC = () => {
                     </div>
                     <div className="p-6 space-y-4 overflow-y-auto">
                         <div>
-                            <label className={LABEL_CLASS}>Title</label>
-                            <input autoFocus type="text" value={modal.data.title} onChange={e => updateModalData('title', e.target.value)} className={INPUT_CLASS} placeholder="e.g. My Website" />
+                            <label className={LABEL_CLASS}>Title <span className="text-red-500">*</span></label>
+                            <input 
+                                autoFocus 
+                                type="text" 
+                                value={modal.data.title} 
+                                onChange={e => updateModalData('title', e.target.value)} 
+                                className={modalErrors.title ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                placeholder="e.g. My Website" 
+                            />
+                            {modalErrors.title && <span className="text-xs text-red-500 font-medium">{modalErrors.title}</span>}
                         </div>
                         <div>
-                            <label className={LABEL_CLASS}>URL</label>
-                            <input type="text" value={modal.data.url} onChange={e => updateModalData('url', e.target.value)} className={INPUT_CLASS} placeholder="https://..." />
+                            <label className={LABEL_CLASS}>URL <span className="text-red-500">*</span></label>
+                            <input 
+                                type="text" 
+                                value={modal.data.url} 
+                                onChange={e => updateModalData('url', e.target.value)} 
+                                className={modalErrors.url ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                placeholder="https://..." 
+                            />
+                             {modalErrors.url && <span className="text-xs text-red-500 font-medium">{modalErrors.url}</span>}
                         </div>
                         
                         <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
@@ -771,7 +918,14 @@ const CreateProfilePage: React.FC = () => {
                                  <div className="space-y-3 animate-fade-in">
                                      <div>
                                          <label className={LABEL_CLASS}>Thumbnail URL</label>
-                                         <input type="text" value={modal.data.thumbnail || ''} onChange={e => updateModalData('thumbnail', e.target.value)} className={INPUT_CLASS} placeholder="https://image..." />
+                                         <input 
+                                            type="text" 
+                                            value={modal.data.thumbnail || ''} 
+                                            onChange={e => updateModalData('thumbnail', e.target.value)} 
+                                            className={modalErrors.thumbnail ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                            placeholder="https://image..." 
+                                         />
+                                          {modalErrors.thumbnail && <span className="text-xs text-red-500 font-medium">{modalErrors.thumbnail}</span>}
                                      </div>
                                      <div>
                                          <label className={LABEL_CLASS}>Description</label>
@@ -818,8 +972,15 @@ const CreateProfilePage: React.FC = () => {
                     </div>
                     <div className="p-6 space-y-4 overflow-y-auto">
                         <div>
-                            <label className={LABEL_CLASS}>Title</label>
-                            <input autoFocus type="text" value={modal.data.title} onChange={e => updateModalData('title', e.target.value)} className={INPUT_CLASS} />
+                            <label className={LABEL_CLASS}>Title <span className="text-red-500">*</span></label>
+                            <input 
+                                autoFocus 
+                                type="text" 
+                                value={modal.data.title} 
+                                onChange={e => updateModalData('title', e.target.value)} 
+                                className={modalErrors.title ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                            />
+                             {modalErrors.title && <span className="text-xs text-red-500 font-medium">{modalErrors.title}</span>}
                         </div>
                         <div>
                             <label className={LABEL_CLASS}>Description</label>
@@ -828,11 +989,23 @@ const CreateProfilePage: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className={LABEL_CLASS}>Thumbnail URL</label>
-                                <input type="text" value={modal.data.thumbnail || ''} onChange={e => updateModalData('thumbnail', e.target.value)} className={INPUT_CLASS} />
+                                <input 
+                                    type="text" 
+                                    value={modal.data.thumbnail || ''} 
+                                    onChange={e => updateModalData('thumbnail', e.target.value)} 
+                                    className={modalErrors.thumbnail ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                />
+                                {modalErrors.thumbnail && <span className="text-xs text-red-500 font-medium">{modalErrors.thumbnail}</span>}
                             </div>
                             <div>
                                 <label className={LABEL_CLASS}>Project URL</label>
-                                <input type="text" value={modal.data.url || ''} onChange={e => updateModalData('url', e.target.value)} className={INPUT_CLASS} />
+                                <input 
+                                    type="text" 
+                                    value={modal.data.url || ''} 
+                                    onChange={e => updateModalData('url', e.target.value)} 
+                                    className={modalErrors.url ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                />
+                                {modalErrors.url && <span className="text-xs text-red-500 font-medium">{modalErrors.url}</span>}
                             </div>
                         </div>
                         <div>
@@ -898,20 +1071,21 @@ const CreateProfilePage: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className={LABEL_CLASS}>Username or Link</label>
+                            <label className={LABEL_CLASS}>Username or Link <span className="text-red-500">*</span></label>
                             <div className="relative">
                                 <input 
                                     autoFocus
                                     type="text" 
                                     value={modal.data.url} 
                                     onChange={e => updateModalData('url', e.target.value)} 
-                                    className={`${INPUT_CLASS} pl-10`} 
+                                    className={modalErrors.url ? `${INPUT_ERROR_CLASS} pl-10` : `${INPUT_CLASS} pl-10`} 
                                     placeholder={modal.data.platform === 'email' ? 'you@example.com' : 'username'} 
                                 />
                                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                                     {getSocialIcon(modal.data.platform, "w-4 h-4")}
                                 </div>
                             </div>
+                            {modalErrors.url && <span className="text-xs text-red-500 font-medium">{modalErrors.url}</span>}
                             <p className="text-xs text-gray-500 mt-2">
                                 {modal.data.url.startsWith('http') || modal.data.url.startsWith('mailto') 
                                     ? <span className="text-green-600 flex items-center gap-1"><Check className="w-3 h-3"/> Custom Link detected</span> 
