@@ -4,17 +4,23 @@ import ProfileView from './components/ProfileView';
 import CreateProfilePage from './components/CreateProfilePage';
 import { Footer } from './components/Footer';
 import { searchProfiles } from './services/dataService';
-import { Search, ArrowRight } from 'lucide-react';
+import { connectWallet } from './services/blockchain';
+import { Search, ArrowRight, Wallet } from 'lucide-react';
 
 const Landing: React.FC = () => {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [walletAddr, setWalletAddr] = useState<string | null>(null);
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSuggestions(searchProfiles(query));
+    if (query.length > 2) {
+        searchProfiles(query).then(setSuggestions);
+    } else {
+        setSuggestions([]);
+    }
   }, [query]);
 
   // Close suggestions when clicking outside
@@ -35,25 +41,46 @@ const Landing: React.FC = () => {
     }
   };
 
+  const handleConnect = async () => {
+    try {
+        const { address } = await connectWallet();
+        setWalletAddr(address);
+    } catch (e) {
+        console.error(e);
+        alert("Failed to connect wallet");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <nav className="w-full py-6 px-6 md:px-12 flex justify-between items-center max-w-7xl mx-auto">
-        <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-          BioLinker
+        <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 cursor-pointer" onClick={() => navigate('/')}>
+          BioLinker <span className="text-xs text-gray-400 font-normal">OnChain</span>
         </div>
-        <div className="flex gap-4">
-           {/* Navigation Items */}
+        <div>
+            {walletAddr ? (
+                <div className="px-4 py-2 bg-gray-100 rounded-full text-sm font-mono text-gray-700">
+                    {walletAddr.slice(0,6)}...{walletAddr.slice(-4)}
+                </div>
+            ) : (
+                <button 
+                    onClick={handleConnect}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors text-sm font-medium"
+                >
+                    <Wallet className="w-4 h-4" /> Connect Wallet
+                </button>
+            )}
         </div>
       </nav>
 
       <main className="flex-1 flex flex-col items-center justify-center text-center px-4 max-w-4xl mx-auto pb-20 w-full">
         <div className="inline-block px-3 py-1 mb-6 rounded-full bg-indigo-50 text-indigo-600 text-sm font-semibold tracking-wide uppercase">
-          No Database. Pure Performance.
+          KiteAI Testnet Live
         </div>
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900 mb-8">
-          One link to rule <br/>
+          Your identity,<br/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
-            them all.
+            immortalized on-chain.
           </span>
         </h1>
 
@@ -63,7 +90,7 @@ const Landing: React.FC = () => {
             <input 
               type="text" 
               className="w-full px-6 py-4 pl-12 rounded-full border border-gray-200 shadow-lg text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              placeholder="Find a profile (e.g. demo, nature_lens)..."
+              placeholder="Find an on-chain profile..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -85,7 +112,7 @@ const Landing: React.FC = () => {
             <div className="absolute top-10 left-0 right-0 pt-8 pb-2 bg-white rounded-b-2xl shadow-xl border-x border-b border-gray-100 overflow-hidden z-0 text-left animate-fade-in">
               {suggestions.length > 0 ? (
                 <>
-                  <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 mt-2">Suggestions</div>
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 mt-2">On-Chain Users</div>
                   {suggestions.map((s) => (
                     <Link 
                       key={s.username} 
@@ -93,12 +120,12 @@ const Landing: React.FC = () => {
                       className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                       onClick={() => setShowSuggestions(false)}
                     >
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                        <img src={s.avatarUrl} alt={s.username} className="w-full h-full object-cover" />
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center flex-shrink-0">
+                         <span className="text-indigo-600 font-bold text-xs">{s.username.substring(0,2).toUpperCase()}</span>
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900 leading-tight">{s.displayName}</div>
-                        <div className="text-xs text-gray-500">@{s.username}</div>
+                        <div className="font-medium text-gray-900 leading-tight">{s.username}</div>
+                        <div className="text-xs text-gray-500">KiteAI Testnet</div>
                       </div>
                     </Link>
                   ))}
@@ -106,8 +133,7 @@ const Landing: React.FC = () => {
               ) : (
                 query.length > 1 && (
                   <div className="px-4 py-4 text-center text-gray-500 text-sm mt-2">
-                    No demo profiles found for "{query}". <br/>
-                    <span className="text-xs opacity-75">Try "demo", "tech", "yoga", "nature"</span>
+                    No users found starting with "{query}".
                   </div>
                 )
               )}
@@ -116,16 +142,16 @@ const Landing: React.FC = () => {
         </div>
 
         <p className="text-xl text-gray-500 mb-8 max-w-2xl mx-auto leading-relaxed">
-          The open-source, static-file based link-in-bio tool. 
-          Host your own profile with a simple JSON file. No recurring fees, no data harvesting.
+          The decentralized link-in-bio tool. 
+          Mint your profile on KiteAI Testnet. Fully on-chain data. Censorship resistant.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
             <Link 
                 to="/new"
-                className="px-8 py-4 bg-white text-gray-900 border border-gray-200 rounded-full font-bold text-lg hover:bg-gray-50 transition-all hover:border-gray-400"
+                className="px-8 py-4 bg-white text-gray-900 border border-gray-200 rounded-full font-bold text-lg hover:bg-gray-50 transition-all hover:border-gray-400 shadow-sm"
             >
-                Create Your Own
+                Mint Profile
             </Link>
         </div>
       </main>

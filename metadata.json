@@ -1,5 +1,5 @@
 {
-  "name": "Web3 service link in bio",
+  "name": "BioLinker App",
   "description": "A high-performance, aesthetically pleasing Link-in-Bio application driven by static JSON files. No database required.",
   "requestFramePermissions": []
 }

@@ -1,5 +1,5 @@
 {
-  "name": "web3-service-link-in-bio",
+  "name": "biolinker-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,8 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "lucide-react": "^0.561.0",
-    "react-router-dom": "^7.10.1"
+    "react-router-dom": "^7.10.1",
+    "ethers": "5.7.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

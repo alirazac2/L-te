@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import ProfileView from './ProfileView';
 import { UserProfile, ThemeType, SocialPlatform, LinkItem, ProjectItem, ProfileTheme } from '../types';
-import { Download, Plus, Trash2, Eye, Save, ArrowLeft, RefreshCw, X, Edit2, Check, ExternalLink, ChevronDown, ChevronUp, Search, Smartphone, Palette } from 'lucide-react';
+import { UploadCloud, Plus, Trash2, Eye, Save, ArrowLeft, RefreshCw, X, Edit2, Check, ExternalLink, ChevronDown, ChevronUp, Search, Smartphone, Palette, Wallet, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSocialIcon, getGenericIcon, ICON_OPTIONS } from './Icons';
+import { connectWallet, publishProfile, getProfileAddress } from '../services/blockchain';
 
 // --- Constants & Helpers ---
 
 const DEFAULT_PROFILE: UserProfile = {
-  username: 'my_username',
+  username: '',
   displayName: 'New Creator',
-  bio: 'Welcome to my new profile! I create cool things.',
+  bio: 'Welcome to my on-chain profile!',
   avatarUrl: '',
   verified: false,
   theme: { type: ThemeType.ModernBlack },
@@ -51,7 +52,14 @@ interface ModalState {
 const CreateProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [signer, setSigner] = useState<any>(null);
   
+  // Publishing State
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+
   // Modal State
   const [modal, setModal] = useState<ModalState>({ type: null, index: null, data: null });
   
@@ -63,10 +71,50 @@ const CreateProfilePage: React.FC = () => {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
 
-  // --- Core Handlers ---
+  // --- Handlers ---
+
+  const handleConnect = async () => {
+      try {
+          const { address, signer: s } = await connectWallet();
+          setWalletAddress(address);
+          setSigner(s);
+      } catch (e) {
+          alert("Failed to connect wallet: " + (e as any).message);
+      }
+  };
 
   const handleIdentityChange = (field: keyof UserProfile, value: any) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
+    setProfile(prev => {
+        const newState = { ...prev, [field]: value };
+        if (field === 'username') {
+             // Basic valid characters check
+             const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+             newState.username = clean;
+             checkUsername(clean);
+        }
+        return newState;
+    });
+  };
+
+  // Debounced check for username
+  useEffect(() => {
+      const timer = setTimeout(() => {
+          if (profile.username.length > 2) {
+              checkUsername(profile.username);
+          }
+      }, 800);
+      return () => clearTimeout(timer);
+  }, [profile.username]);
+
+  const checkUsername = async (u: string) => {
+      if (u.length < 3) return;
+      setUsernameStatus('checking');
+      const addr = await getProfileAddress(u);
+      if (addr) {
+          setUsernameStatus('taken');
+      } else {
+          setUsernameStatus('available');
+      }
   };
 
   const handleThemeChange = (type: ThemeType, customKey?: keyof ProfileTheme, customValue?: string) => {
@@ -101,11 +149,7 @@ const CreateProfilePage: React.FC = () => {
         else if (type === 'social') list = [...prev.socials];
 
         const newIndex = direction === 'up' ? index - 1 : index + 1;
-
-        // Bounds check
         if (newIndex < 0 || newIndex >= list.length) return prev;
-
-        // Swap
         [list[index], list[newIndex]] = [list[newIndex], list[index]];
 
         if (type === 'link') newData.links = list;
@@ -118,14 +162,13 @@ const CreateProfilePage: React.FC = () => {
 
   const openModal = (type: ModalType, index: number | null) => {
       let data = {};
-      setShowPlatformDropdown(false); // Reset dropdown state
+      setShowPlatformDropdown(false);
 
       if (index !== null) {
           if (type === 'link') data = { ...profile.links[index] };
           if (type === 'project') data = { ...profile.projects![index] };
           if (type === 'social') data = { ...profile.socials[index] };
       } else {
-          // Defaults for new items
           if (type === 'link') data = { id: Date.now().toString(), title: '', url: '', icon: 'Link', featured: false };
           if (type === 'project') data = { id: Date.now().toString(), title: '', description: '', url: '', tags: [] };
           if (type === 'social') data = { platform: SocialPlatform.Instagram, url: '' };
@@ -140,7 +183,6 @@ const CreateProfilePage: React.FC = () => {
 
       setProfile(prev => {
           const newData = { ...prev };
-          
           if (modal.type === 'link') {
               const list = [...prev.links];
               if (modal.index !== null) list[modal.index] = modal.data;
@@ -152,24 +194,19 @@ const CreateProfilePage: React.FC = () => {
               else list.push(modal.data);
               newData.projects = list;
           } else if (modal.type === 'social') {
-              // Smart URL processing happens here
               const rawUrl = modal.data.url.trim();
               const platform = modal.data.platform;
               let finalUrl = rawUrl;
-
-              // If it's not a URL (doesn't start with http/https) and not empty
               if (rawUrl && !rawUrl.match(/^https?:\/\//i) && !rawUrl.startsWith('mailto:')) {
                   const cleanHandle = rawUrl.replace(/^@/, '');
                   finalUrl = (SOCIAL_BASE_URLS[platform as SocialPlatform] || '') + cleanHandle;
               }
-
               const socialData = { ...modal.data, url: finalUrl };
               const list = [...prev.socials];
               if (modal.index !== null) list[modal.index] = socialData;
               else list.push(socialData);
               newData.socials = list;
           }
-
           return newData;
       });
       closeModal();
@@ -179,21 +216,37 @@ const CreateProfilePage: React.FC = () => {
       setModal(prev => ({ ...prev, data: { ...prev.data, [field]: value } }));
   };
   
-  // Filter icons based on search
   const filteredIcons = ICON_OPTIONS.filter(icon => 
     icon.toLowerCase().includes(iconSearch.toLowerCase())
   );
 
-  // --- Render Helpers ---
+  // --- Publish Logic ---
 
-  const downloadJson = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(profile, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "db.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+  const handlePublish = async () => {
+      if (!walletAddress || !signer) {
+          alert("Please connect your wallet first.");
+          return;
+      }
+      if (!profile.username || profile.username.length < 3) {
+          alert("Username must be at least 3 characters.");
+          return;
+      }
+
+      setIsPublishing(true);
+      setPublishStatus("Initiating...");
+      try {
+          await publishProfile(profile.username, profile, signer, (status) => {
+              setPublishStatus(status);
+          });
+          alert("Success! Your profile is now on-chain.");
+          // Redirect to profile?
+      } catch (e: any) {
+          console.error(e);
+          alert("Error publishing: " + (e.message || e));
+          setPublishStatus("Failed.");
+      } finally {
+          setIsPublishing(false);
+      }
   };
 
   return (
@@ -209,33 +262,69 @@ const CreateProfilePage: React.FC = () => {
                     <Link to="/" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
-                    <h1 className="text-xl font-bold text-gray-800">Create Profile</h1>
+                    <h1 className="text-xl font-bold text-gray-800">Mint Profile</h1>
                 </div>
                 <div className="flex gap-2">
                      <button 
                         onClick={() => setProfile(DEFAULT_PROFILE)}
                         className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                        title="Reset to Default"
+                        title="Reset"
                     >
                         <RefreshCw className="w-4 h-4" />
                     </button>
-                    <button 
-                        onClick={downloadJson}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors shadow-sm"
-                    >
-                        <Download className="w-4 h-4" />
-                        <span className="hidden sm:inline">Download JSON</span>
-                    </button>
+                    {!walletAddress ? (
+                         <button 
+                            onClick={handleConnect}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium text-sm transition-colors"
+                        >
+                            <Wallet className="w-4 h-4" /> Connect
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={handlePublish}
+                            disabled={isPublishing}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors shadow-sm disabled:opacity-70 disabled:cursor-wait"
+                        >
+                            {isPublishing ? <Loader2 className="w-4 h-4 animate-spin"/> : <UploadCloud className="w-4 h-4" />}
+                            <span className="hidden sm:inline">{isPublishing ? 'Publishing...' : 'Mint to Chain'}</span>
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {/* Status Bar for Publishing */}
+            {isPublishing && (
+                <div className="bg-indigo-50 px-6 py-2 text-xs font-medium text-indigo-700 border-b border-indigo-100 flex items-center gap-2 animate-fade-in">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    {publishStatus}
+                </div>
+            )}
 
             {/* Scrollable Form Area */}
             <div className="flex-1 overflow-y-auto p-6 space-y-10 scrollbar-thin">
                 
                 {/* 1. Identity */}
                 <section>
-                    <h2 className={SECTION_TITLE_CLASS}>Identity</h2>
+                    <h2 className={SECTION_TITLE_CLASS}>On-Chain Identity</h2>
                     <div className="grid gap-5">
+                        <div>
+                            <label className={LABEL_CLASS}>Username (Unique ID)</label>
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    value={profile.username} 
+                                    onChange={e => handleIdentityChange('username', e.target.value)} 
+                                    className={`${INPUT_CLASS} ${usernameStatus === 'taken' ? 'border-red-300 focus:ring-red-200' : ''} ${usernameStatus === 'available' ? 'border-green-300 focus:ring-green-200' : ''}`} 
+                                    placeholder="your_unique_name" 
+                                />
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                    {usernameStatus === 'checking' && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                                    {usernameStatus === 'taken' && <span className="text-xs font-bold text-red-500">TAKEN</span>}
+                                    {usernameStatus === 'available' && <span className="text-xs font-bold text-green-500">OPEN</span>}
+                                </div>
+                            </div>
+                            {usernameStatus === 'taken' && <p className="text-xs text-red-500 mt-1">If this is you, connecting your wallet will allow updates.</p>}
+                        </div>
                         <div>
                             <label className={LABEL_CLASS}>Display Name</label>
                             <input type="text" value={profile.displayName} onChange={e => handleIdentityChange('displayName', e.target.value)} className={INPUT_CLASS} />
@@ -359,7 +448,6 @@ const CreateProfilePage: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                         {/* Reorder Buttons */}
                                         <div className="flex flex-col mr-2">
                                             <button 
                                                 onClick={() => moveItem('project', idx, 'up')} 
@@ -414,7 +502,6 @@ const CreateProfilePage: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        {/* Reorder Buttons */}
                                         <div className="flex flex-col mr-2">
                                             <button 
                                                 onClick={() => moveItem('link', idx, 'up')} 
@@ -468,7 +555,6 @@ const CreateProfilePage: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        {/* Reorder Buttons */}
                                         <div className="flex flex-col mr-2">
                                             <button 
                                                 onClick={() => moveItem('social', idx, 'up')} 
@@ -522,11 +608,6 @@ const CreateProfilePage: React.FC = () => {
                 Live Preview
             </div>
 
-            {/* 
-                Phone Mockup Container 
-                - On Mobile + Preview Mode: Full screen (w-full h-full), no borders.
-                - On Desktop: Phone frame (max-w-[380px]), rounded, bordered.
-            */}
             <div className={`
                 relative mx-auto transition-all duration-500 ease-in-out bg-white overflow-hidden
                 ${viewMode === 'preview' 
@@ -535,7 +616,7 @@ const CreateProfilePage: React.FC = () => {
                 }
                 md:border-gray-900 md:bg-gray-900
             `}>
-                {/* Mobile Notch (Only visible on desktop/simulated frame) */}
+                {/* Mobile Notch */}
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 h-6 w-32 bg-gray-900 rounded-b-xl z-20 hidden md:block"></div>
                 
                 {/* Screen Content */}
@@ -547,9 +628,7 @@ const CreateProfilePage: React.FC = () => {
             </div>
         </div>
 
-        {/* --- MODALS --- */}
-
-        {/* 1. Link Modal */}
+        {/* --- MODALS (Link/Project/Social) Code below is identical to previous logic --- */}
         {modal.type === 'link' && modal.data && (
             <div className={MODAL_OVERLAY_CLASS}>
                 <div className={MODAL_CONTENT_CLASS}>
@@ -614,7 +693,7 @@ const CreateProfilePage: React.FC = () => {
             </div>
         )}
 
-        {/* 2. Project Modal */}
+        {/* Project Modal */}
         {modal.type === 'project' && modal.data && (
             <div className={MODAL_OVERLAY_CLASS}>
                 <div className={MODAL_CONTENT_CLASS}>
@@ -654,7 +733,7 @@ const CreateProfilePage: React.FC = () => {
             </div>
         )}
 
-        {/* 3. Social Modal (Smart Dropdown) */}
+        {/* Social Modal */}
         {modal.type === 'social' && modal.data && (
             <div className={MODAL_OVERLAY_CLASS}>
                 <div className={MODAL_CONTENT_CLASS}>
@@ -664,8 +743,6 @@ const CreateProfilePage: React.FC = () => {
                     </div>
                     
                     <div className="p-6 space-y-6 overflow-y-visible min-h-[300px]">
-                        
-                        {/* Custom Dropdown */}
                         <div className="relative">
                             <label className={LABEL_CLASS}>Platform</label>
                             <button 
@@ -680,8 +757,6 @@ const CreateProfilePage: React.FC = () => {
                                 </div>
                                 {showPlatformDropdown ? <ChevronUp className="w-5 h-5 text-gray-400"/> : <ChevronDown className="w-5 h-5 text-gray-400"/>}
                             </button>
-
-                            {/* Dropdown Menu */}
                             {showPlatformDropdown && (
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-[250px] overflow-y-auto animate-fade-in">
                                     {Object.values(SocialPlatform).map(p => (
@@ -707,7 +782,6 @@ const CreateProfilePage: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Smart Input */}
                         <div>
                             <label className={LABEL_CLASS}>Username or Link</label>
                             <div className="relative">
@@ -731,7 +805,6 @@ const CreateProfilePage: React.FC = () => {
                                         : "Enter a username (e.g. @john) or a full link."}
                             </p>
                         </div>
-
                     </div>
                     <div className="p-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50 mt-auto">
                         <button onClick={closeModal} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Cancel</button>
@@ -741,10 +814,9 @@ const CreateProfilePage: React.FC = () => {
             </div>
         )}
 
-        {/* --- ICON PICKER FULL SCREEN MODAL --- */}
+        {/* Icon Picker */}
         {showIconPicker && (
             <div className="fixed inset-0 z-[60] bg-white flex flex-col animate-slide-up">
-                {/* Header */}
                 <div className="p-4 border-b border-gray-100 flex items-center gap-4 bg-white shadow-sm z-10">
                     <button onClick={() => setShowIconPicker(false)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
                         <ArrowLeft className="w-6 h-6" />
@@ -760,8 +832,6 @@ const CreateProfilePage: React.FC = () => {
                         />
                     </div>
                 </div>
-                
-                {/* Grid */}
                 <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 max-w-5xl mx-auto">
                         {filteredIcons.map(iconName => (
@@ -784,12 +854,6 @@ const CreateProfilePage: React.FC = () => {
                                 <span className="text-xs font-semibold truncate w-full text-center opacity-90">{iconName}</span>
                             </button>
                         ))}
-                        {filteredIcons.length === 0 && (
-                            <div className="col-span-full flex flex-col items-center justify-center py-20 text-gray-400">
-                                <Search className="w-12 h-12 mb-4 opacity-20" />
-                                <p>No icons found for "{iconSearch}"</p>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
