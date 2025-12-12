@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ProfileView from './ProfileView';
 import { UserProfile, ThemeType, SocialPlatform, LinkItem, ProjectItem, ProfileTheme } from '../types';
-import { UploadCloud, Plus, Trash2, Eye, Save, ArrowLeft, RefreshCw, X, Edit2, Check, ExternalLink, ChevronDown, ChevronUp, Search, Smartphone, Palette, Wallet, Loader2 } from 'lucide-react';
+import { UploadCloud, Plus, Trash2, Eye, Save, ArrowLeft, RefreshCw, X, Edit2, Check, ExternalLink, ChevronDown, ChevronUp, Search, Smartphone, Palette, Wallet, Loader2, UserPlus, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getSocialIcon, getGenericIcon, ICON_OPTIONS } from './Icons';
-import { connectWallet, publishProfile, getProfileAddress } from '../services/blockchain';
+import { connectWallet, publishProfile, getProfileAddress, getUsernameByWallet, fetchProfileDataOnChain } from '../services/blockchain';
 
 // --- Constants & Helpers ---
 
@@ -52,8 +52,12 @@ interface ModalState {
 const CreateProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+  
+  // Wallet & Auth State
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [signer, setSigner] = useState<any>(null);
+  const [hasRegisteredProfile, setHasRegisteredProfile] = useState(false);
+  const [isCheckingWallet, setIsCheckingWallet] = useState(false);
   
   // Publishing State
   const [isPublishing, setIsPublishing] = useState(false);
@@ -71,40 +75,71 @@ const CreateProfilePage: React.FC = () => {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
 
-  // --- Handlers ---
+  // --- Wallet & Initial Load ---
 
   const handleConnect = async () => {
       try {
           const { address, signer: s } = await connectWallet();
           setWalletAddress(address);
           setSigner(s);
+          checkUserRegistration(address);
       } catch (e) {
           alert("Failed to connect wallet: " + (e as any).message);
       }
   };
 
+  const checkUserRegistration = async (address: string) => {
+      setIsCheckingWallet(true);
+      try {
+          const existingUsername = await getUsernameByWallet(address);
+          if (existingUsername) {
+              setHasRegisteredProfile(true);
+              // Fetch the existing data
+              const data = await fetchProfileDataOnChain(existingUsername);
+              if (data) {
+                  setProfile(data);
+              } else {
+                  // Fallback if data is corrupted but username exists
+                  setProfile(p => ({...p, username: existingUsername}));
+              }
+          } else {
+              setHasRegisteredProfile(false);
+              setProfile(DEFAULT_PROFILE);
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsCheckingWallet(false);
+      }
+  };
+
+  // --- Handlers ---
+
   const handleIdentityChange = (field: keyof UserProfile, value: any) => {
     setProfile(prev => {
         const newState = { ...prev, [field]: value };
         if (field === 'username') {
-             // Basic valid characters check
              const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, '');
              newState.username = clean;
-             checkUsername(clean);
+             // Only check username availability if we are in registration mode
+             if (!hasRegisteredProfile) {
+                 checkUsername(clean);
+             }
         }
         return newState;
     });
   };
 
-  // Debounced check for username
+  // Debounced check for username (only for new users)
   useEffect(() => {
+      if (hasRegisteredProfile) return;
       const timer = setTimeout(() => {
           if (profile.username.length > 2) {
               checkUsername(profile.username);
           }
       }, 800);
       return () => clearTimeout(timer);
-  }, [profile.username]);
+  }, [profile.username, hasRegisteredProfile]);
 
   const checkUsername = async (u: string) => {
       if (u.length < 3) return;
@@ -233,13 +268,17 @@ const CreateProfilePage: React.FC = () => {
       }
 
       setIsPublishing(true);
-      setPublishStatus("Initiating...");
+      setPublishStatus(hasRegisteredProfile ? "Updating profile..." : "Minting username...");
+      
       try {
           await publishProfile(profile.username, profile, signer, (status) => {
               setPublishStatus(status);
           });
-          alert("Success! Your profile is now on-chain.");
-          // Redirect to profile?
+          
+          if (!hasRegisteredProfile) {
+              setHasRegisteredProfile(true);
+          }
+          alert("Success! Your profile is on-chain.");
       } catch (e: any) {
           console.error(e);
           alert("Error publishing: " + (e.message || e));
@@ -249,6 +288,99 @@ const CreateProfilePage: React.FC = () => {
       }
   };
 
+
+  // --- CONDITIONAL RENDERING ---
+
+  // 1. Not Connected
+  if (!walletAddress) {
+      return (
+          <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+               <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-6">
+                   <Wallet className="w-8 h-8" />
+               </div>
+               <h1 className="text-3xl font-bold text-gray-900 mb-4">Connect to Mint</h1>
+               <p className="text-gray-500 max-w-md mb-8">
+                   You need to connect your wallet to Create or Edit your on-chain identity on the KiteAI Testnet.
+               </p>
+               <button 
+                    onClick={handleConnect}
+                    className="flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 font-bold text-lg transition-all shadow-lg shadow-indigo-200"
+                >
+                    <Wallet className="w-5 h-5" /> Connect Wallet
+                </button>
+                <Link to="/" className="mt-8 text-sm text-gray-400 hover:text-gray-900 font-medium">Back to Home</Link>
+          </div>
+      );
+  }
+
+  // 2. Loading User Status
+  if (isCheckingWallet) {
+      return (
+          <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+              <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+              <p className="text-gray-500 font-medium">Checking your on-chain status...</p>
+          </div>
+      );
+  }
+
+  // 3. Registration Mode (Connect but No Profile)
+  if (!hasRegisteredProfile) {
+      return (
+          <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 animate-fade-in relative">
+              <Link to="/" className="absolute top-6 left-6 p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
+                 <ArrowLeft className="w-6 h-6" />
+              </Link>
+
+              <div className="max-w-md w-full">
+                  <div className="text-center mb-10">
+                    <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl mb-6">
+                        <UserPlus className="w-7 h-7" />
+                    </div>
+                    <h1 className="text-3xl font-bold text-gray-900">Claim Identity</h1>
+                    <p className="text-gray-500 mt-2">Choose your unique username to start.</p>
+                  </div>
+
+                  <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+                        <label className="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Username</label>
+                        <div className="relative mb-6">
+                            <input 
+                                autoFocus
+                                type="text" 
+                                value={profile.username} 
+                                onChange={e => handleIdentityChange('username', e.target.value)} 
+                                className={`w-full px-5 py-4 text-lg bg-gray-50 border-2 rounded-xl outline-none transition-all ${
+                                    usernameStatus === 'taken' ? 'border-red-300 focus:border-red-500 bg-red-50/50' : 
+                                    usernameStatus === 'available' ? 'border-green-300 focus:border-green-500 bg-green-50/50' : 
+                                    'border-gray-200 focus:border-indigo-500 focus:bg-white'
+                                }`}
+                                placeholder="e.g. crypto_king" 
+                            />
+                            <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                                {usernameStatus === 'checking' && <Loader2 className="w-5 h-5 animate-spin text-gray-400" />}
+                                {usernameStatus === 'taken' && <span className="text-sm font-bold text-red-500 flex items-center gap-1"><X className="w-4 h-4"/> Taken</span>}
+                                {usernameStatus === 'available' && <span className="text-sm font-bold text-green-600 flex items-center gap-1"><Check className="w-4 h-4"/> Available</span>}
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={handlePublish}
+                            disabled={isPublishing || usernameStatus !== 'available' || profile.username.length < 3}
+                            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {isPublishing ? <Loader2 className="w-5 h-5 animate-spin"/> : <UploadCloud className="w-5 h-5" />}
+                            {isPublishing ? publishStatus : 'Mint Profile'}
+                        </button>
+                        
+                        <p className="text-xs text-center text-gray-400 mt-4">
+                            Minting requires a small gas fee on KiteAI Testnet.
+                        </p>
+                  </div>
+              </div>
+          </div>
+      );
+  }
+
+  // 4. Editor Mode (Has Profile)
   return (
     <div className="flex flex-col md:flex-row h-screen bg-white text-gray-900 overflow-hidden font-sans relative">
         {/* Editor Sidebar */}
@@ -262,33 +394,22 @@ const CreateProfilePage: React.FC = () => {
                     <Link to="/" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
-                    <h1 className="text-xl font-bold text-gray-800">Mint Profile</h1>
+                    <div>
+                        <h1 className="text-xl font-bold text-gray-800">Edit Profile</h1>
+                        <div className="text-xs text-green-600 font-medium flex items-center gap-1">
+                             <div className="w-2 h-2 rounded-full bg-green-500"></div> Online
+                        </div>
+                    </div>
                 </div>
                 <div className="flex gap-2">
-                     <button 
-                        onClick={() => setProfile(DEFAULT_PROFILE)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                        title="Reset"
+                    <button 
+                        onClick={handlePublish}
+                        disabled={isPublishing}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors shadow-sm disabled:opacity-70 disabled:cursor-wait"
                     >
-                        <RefreshCw className="w-4 h-4" />
+                        {isPublishing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4" />}
+                        <span className="hidden sm:inline">{isPublishing ? 'Saving...' : 'Save Changes'}</span>
                     </button>
-                    {!walletAddress ? (
-                         <button 
-                            onClick={handleConnect}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium text-sm transition-colors"
-                        >
-                            <Wallet className="w-4 h-4" /> Connect
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={handlePublish}
-                            disabled={isPublishing}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors shadow-sm disabled:opacity-70 disabled:cursor-wait"
-                        >
-                            {isPublishing ? <Loader2 className="w-4 h-4 animate-spin"/> : <UploadCloud className="w-4 h-4" />}
-                            <span className="hidden sm:inline">{isPublishing ? 'Publishing...' : 'Mint to Chain'}</span>
-                        </button>
-                    )}
                 </div>
             </div>
 
@@ -307,23 +428,17 @@ const CreateProfilePage: React.FC = () => {
                 <section>
                     <h2 className={SECTION_TITLE_CLASS}>On-Chain Identity</h2>
                     <div className="grid gap-5">
-                        <div>
-                            <label className={LABEL_CLASS}>Username (Unique ID)</label>
+                        <div className="opacity-70">
+                            <label className={LABEL_CLASS}>Username (Locked)</label>
                             <div className="relative">
                                 <input 
                                     type="text" 
                                     value={profile.username} 
-                                    onChange={e => handleIdentityChange('username', e.target.value)} 
-                                    className={`${INPUT_CLASS} ${usernameStatus === 'taken' ? 'border-red-300 focus:ring-red-200' : ''} ${usernameStatus === 'available' ? 'border-green-300 focus:ring-green-200' : ''}`} 
-                                    placeholder="your_unique_name" 
+                                    disabled
+                                    className={`${INPUT_CLASS} bg-gray-100 cursor-not-allowed`} 
                                 />
-                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                    {usernameStatus === 'checking' && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
-                                    {usernameStatus === 'taken' && <span className="text-xs font-bold text-red-500">TAKEN</span>}
-                                    {usernameStatus === 'available' && <span className="text-xs font-bold text-green-500">OPEN</span>}
-                                </div>
+                                <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                             </div>
-                            {usernameStatus === 'taken' && <p className="text-xs text-red-500 mt-1">If this is you, connecting your wallet will allow updates.</p>}
                         </div>
                         <div>
                             <label className={LABEL_CLASS}>Display Name</label>

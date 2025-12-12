@@ -82,6 +82,17 @@ export const getProfileAddress = async (username: string): Promise<string | null
     }
 };
 
+export const getUsernameByWallet = async (walletAddress: string): Promise<string | null> => {
+    try {
+        const hub = getProfileHubContract(readProvider);
+        const username = await hub.getUserByWallet(walletAddress);
+        return username || null;
+    } catch (e) {
+        console.error("Error checking wallet owner", e);
+        return null;
+    }
+};
+
 export const fetchProfileDataOnChain = async (username: string): Promise<UserProfile | null> => {
     try {
         const address = await getProfileAddress(username);
