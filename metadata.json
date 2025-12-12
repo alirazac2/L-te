@@ -1,5 +1,5 @@
 {
-  "name": "Copy of ZK3 Based",
-  "description": "An on-chain AI agent capable of reading balances, checking block heights, and drafting transactions on Base Mainnet and Base Sepolia using Gemini 2.5.",
+  "name": "Web3 service link in bio",
+  "description": "A high-performance, aesthetically pleasing Link-in-Bio application driven by static JSON files. No database required.",
   "requestFramePermissions": []
 }

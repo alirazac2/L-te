@@ -1,54 +1,61 @@
-
-export enum Role {
-  USER = 'user',
-  MODEL = 'model',
-  SYSTEM = 'system'
+export enum SocialPlatform {
+  Instagram = 'instagram',
+  Twitter = 'twitter',
+  Github = 'github',
+  Linkedin = 'linkedin',
+  Youtube = 'youtube',
+  Facebook = 'facebook',
+  Tiktok = 'tiktok',
+  Email = 'email'
 }
 
-export interface ChatMessage {
-  id: string;
-  role: Role;
-  content: string;
-  isLoading?: boolean;
-  timestamp: number;
+export enum ThemeType {
+  ModernBlack = 'modern-black',
+  CleanWhite = 'clean-white',
+  GradientBlue = 'gradient-blue',
+  SunsetVibe = 'sunset-vibe',
+  ForestGlass = 'forest-glass'
 }
 
-export interface ContractMetadata {
-  address: string;
-  abi: any[];
-  sourceCode: string;
-  deployedAt: number;
+export interface SocialLink {
+  platform: SocialPlatform;
+  url: string;
 }
 
-export interface ChatSession {
+export interface LinkItem {
   id: string;
   title: string;
-  messages: ChatMessage[];
-  updatedAt: number;
-  contractData?: ContractMetadata; // Stores the single contract allowed per session
-  type?: 'chat' | 'zbaso'; // Distinguish session type
+  url: string;
+  icon?: string; // Lucide icon name
+  thumbnail?: string;
+  featured?: boolean;
+  description?: string;
 }
 
-export interface ChainConfig {
-  chainId: string; // Hex string, e.g., '0x2105'
-  chainName: string;
-  nativeCurrency: {
-    name: string;
-    symbol: string;
-    decimals: number;
-  };
-  rpcUrls: string[];
-  blockExplorerUrls: string[];
+export interface ProjectItem {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail?: string;
+  url?: string;
+  tags?: string[];
 }
 
-export type WalletState = {
-  address: string | null;
-  chainId: string | null;
-  isConnected: boolean;
-};
+export interface ProfileTheme {
+  type: ThemeType;
+  customBackground?: string; // Optional override
+  customTextColor?: string; // Optional override
+  customButtonColor?: string; // Optional override
+}
 
-// Tool types
-export interface TransactionRequest {
-  to: string;
-  value: string; // in ETH string
+export interface UserProfile {
+  username: string;
+  displayName: string;
+  bio: string;
+  avatarUrl: string;
+  verified?: boolean;
+  theme: ProfileTheme;
+  socials: SocialLink[];
+  links: LinkItem[];
+  projects?: ProjectItem[];
 }

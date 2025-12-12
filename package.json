@@ -1,5 +1,5 @@
 {
-  "name": "copy-of-zk3-based",
+  "name": "web3-service-link-in-bio",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,15 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "@google/genai": "^1.31.0",
-    "ethers": "5.7.2",
-    "@reown/appkit": "^1.8.14",
-    "@reown/appkit-adapter-ethers5": "^1.8.14",
-    "marked": "15.0.0",
-    "vite": "^7.2.7",
-    "@vitejs/plugin-react": "^5.1.2"
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "lucide-react": "^0.561.0",
+    "react-router-dom": "^7.10.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

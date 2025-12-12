@@ -1,0 +1,548 @@
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams } from 'react-router-dom';
+import { fetchProfile } from '../services/dataService';
+import { UserProfile, LinkItem, ThemeType, ProjectItem } from '../types';
+import { ThemeWrapper, getButtonClasses } from './ThemeWrapper';
+import { getSocialIcon, getGenericIcon } from './Icons';
+import { BadgeCheck, Share2, AlertCircle, ChevronRight, ExternalLink, X, Layers } from 'lucide-react';
+
+interface ProfileViewProps {
+    initialData?: UserProfile;
+}
+
+const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
+  const { username } = useParams<{ username: string }>();
+  const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(!initialData);
+  const [error, setError] = useState(false);
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+
+  // Determine which profile data to use: prop (preview) or fetched (live)
+  const profile = initialData || fetchedProfile;
+
+  useEffect(() => {
+    // Only fetch if we don't have initialData (preview mode) and we have a username
+    if (username && !initialData) {
+      setLoading(true);
+      // Simulate network delay for skeleton demonstration (remove setTimeout in prod if real API)
+      const timer = setTimeout(() => {
+          fetchProfile(username)
+            .then((data) => {
+              if (data) {
+                setFetchedProfile(data);
+              } else {
+                setError(true);
+              }
+            })
+            .catch(() => setError(true))
+            .finally(() => setLoading(false));
+      }, 800);
+      return () => clearTimeout(timer);
+    } else if (initialData) {
+        setLoading(false);
+    }
+  }, [username, initialData]);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = profile?.displayName || 'Bio Link';
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          url,
+        });
+        return;
+      } catch (err) {
+        console.warn("Share failed:", err);
+        if (err instanceof Error && err.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      alert('Link copied to clipboard!');
+    } catch (err) {
+      console.error("Clipboard copy failed", err);
+      alert('Could not share profile.');
+    }
+  };
+
+  if (loading && !profile) {
+    return <ProfileSkeleton />;
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-6 text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <h1 className="text-xl font-semibold text-gray-900">Profile Not Found</h1>
+        <p className="text-gray-500 mt-2 max-w-sm">
+          We couldn't find a configuration for <strong>{username}</strong>.
+        </p>
+        <a href="/" className="mt-8 px-6 py-2.5 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-all">
+          Back to Home
+        </a>
+      </div>
+    );
+  }
+
+  const isLightTheme = profile.theme.type === ThemeType.CleanWhite;
+  
+  return (
+    <ThemeWrapper theme={profile.theme}>
+      <div className="min-h-screen w-full flex justify-center overflow-x-hidden">
+        <div className="w-full max-w-[600px] px-6 py-12 md:py-16 flex flex-col items-center animate-fade-in relative">
+            
+            {/* Top Bar Actions */}
+            <div className="absolute top-6 right-6 z-20">
+                <button 
+                    onClick={handleShare}
+                    className="p-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 backdrop-blur-md transition-all text-current opacity-80 hover:opacity-100"
+                    aria-label="Share Profile"
+                >
+                    <Share2 className="w-4 h-4" />
+                </button>
+            </div>
+
+            {/* Profile Header */}
+            <header className="flex flex-col items-center mb-10 w-full z-10">
+                <div className="relative mb-6">
+                    <div className="w-28 h-28 rounded-full overflow-hidden shadow-2xl ring-4 ring-white/10 dark:ring-white/5 bg-gray-200">
+                         {profile.avatarUrl ? (
+                            <img 
+                                src={profile.avatarUrl} 
+                                alt={profile.displayName} 
+                                className="w-full h-full object-cover"
+                            />
+                         ) : (
+                             <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-3xl font-bold">
+                                 {profile.displayName.charAt(0)}
+                             </div>
+                         )}
+                    </div>
+                </div>
+
+                <div className="text-center space-y-2 max-w-sm w-full px-4">
+                    <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center justify-center gap-1.5 truncate">
+                        {profile.displayName}
+                        {profile.verified && (
+                            <BadgeCheck className="w-5 h-5 text-blue-500 fill-blue-500/10 shrink-0" />
+                        )}
+                    </h1>
+                    <p className="opacity-70 text-sm font-medium leading-relaxed break-words">
+                        {profile.bio}
+                    </p>
+                </div>
+
+                {/* Socials - Horizontal Strip */}
+                <div className="flex flex-wrap justify-center gap-3 mt-8">
+                    {profile.socials.map((social, idx) => (
+                        <a
+                            key={idx}
+                            href={social.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`
+                                group flex items-center justify-center w-11 h-11 rounded-full transition-all duration-300
+                                ${isLightTheme 
+                                    ? 'bg-white border border-gray-200 text-gray-600 shadow-sm hover:shadow-md hover:text-black hover:border-gray-300' 
+                                    : 'bg-white/10 border border-white/5 text-white/90 shadow-lg backdrop-blur-sm hover:bg-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:text-white hover:border-white/20'}
+                            `}
+                            aria-label={social.platform}
+                        >
+                            {getSocialIcon(social.platform, "w-5 h-5 transition-transform duration-300")}
+                        </a>
+                    ))}
+                </div>
+            </header>
+
+            {/* Links Stack */}
+            <main className="w-full space-y-3 z-10 pb-6">
+                {profile.links.map((link, idx) => (
+                    <LinkCard 
+                        key={link.id} 
+                        link={link} 
+                        theme={profile.theme} 
+                        index={idx} 
+                    />
+                ))}
+            </main>
+
+            {/* Single Projects Trigger Card - Separated Solo */}
+            {profile.projects && profile.projects.length > 0 && (
+                <section className="w-full z-10 mt-8 mb-8 relative animate-fade-in delay-200">
+                    <div className={`flex items-center gap-4 mb-5 opacity-40 px-2 ${isLightTheme ? 'text-black' : 'text-white'}`}>
+                        <div className="h-px bg-current flex-1 rounded-full" />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Portfolio</span>
+                        <div className="h-px bg-current flex-1 rounded-full" />
+                    </div>
+
+                    <button
+                        onClick={() => setShowProjectsModal(true)}
+                        className={`
+                            w-full p-1 rounded-[1.5rem] transition-all duration-300 ease-out active:scale-[0.98] group relative
+                            ${isLightTheme 
+                                ? 'bg-gradient-to-br from-gray-100 to-white shadow-sm hover:shadow-md' 
+                                : 'bg-gradient-to-br from-white/10 to-white/5 shadow-2xl hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]'}
+                        `}
+                    >
+                        <div className={`
+                            relative w-full p-5 rounded-[1.3rem] flex items-center justify-between border
+                            ${isLightTheme 
+                                ? 'bg-white border-gray-100 group-hover:border-gray-200' 
+                                : 'bg-[#1a1a1a]/80 border-white/10 group-hover:border-white/20 backdrop-blur-xl'}
+                        `}>
+                            <div className="flex items-center gap-5 min-w-0">
+                                <div className={`
+                                    w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner
+                                    ${isLightTheme 
+                                        ? 'bg-gradient-to-br from-indigo-50 to-white text-indigo-600' 
+                                        : 'bg-gradient-to-br from-white/10 to-transparent text-white'}
+                                `}>
+                                    <Layers className="w-7 h-7" />
+                                </div>
+                                <div className="text-left min-w-0">
+                                    <h3 className={`font-bold text-lg ${isLightTheme ? 'text-gray-900' : 'text-white'}`}>
+                                        Featured Projects
+                                    </h3>
+                                    <p className={`text-xs opacity-60 mt-0.5 ${isLightTheme ? 'text-gray-500' : 'text-white/80'}`}>
+                                        Explore {profile.projects.length} collection{profile.projects.length !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className={`
+                                w-10 h-10 rounded-full flex items-center justify-center transition-transform duration-500 group-hover:translate-x-1
+                                ${isLightTheme ? 'bg-gray-50 text-gray-400' : 'bg-white/5 text-white/50'}
+                            `}>
+                                <ChevronRight className="w-5 h-5" />
+                            </div>
+                        </div>
+                    </button>
+                </section>
+            )}
+
+            {/* Branding Footer */}
+            <footer className="mt-auto py-4 text-center">
+                <a href="/" className="inline-block px-3 py-1 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold tracking-widest uppercase opacity-50 hover:opacity-100 transition-all">
+                    BioLinker © {new Date().getFullYear()}
+                </a>
+            </footer>
+
+            {/* All Projects Modal */}
+            {showProjectsModal && profile.projects && (
+                <ProjectsListModal 
+                    projects={profile.projects} 
+                    onClose={() => setShowProjectsModal(false)} 
+                    isLightTheme={isLightTheme}
+                />
+            )}
+
+        </div>
+      </div>
+    </ThemeWrapper>
+  );
+};
+
+// --- Profile Skeleton Component ---
+
+const ProfileSkeleton: React.FC = () => {
+    return (
+      <div className="min-h-screen w-full flex justify-center bg-gray-50">
+        <div className="w-full max-w-[600px] px-6 py-12 md:py-16 flex flex-col items-center animate-pulse">
+            
+            {/* Header Skeleton */}
+            <div className="flex flex-col items-center mb-10 w-full">
+                <div className="w-28 h-28 rounded-full bg-gray-200 mb-6" />
+                <div className="h-8 w-48 bg-gray-200 rounded-lg mb-3" />
+                <div className="h-4 w-64 bg-gray-200 rounded-lg mb-8" />
+                
+                {/* Socials Skeleton */}
+                <div className="flex gap-3">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="w-11 h-11 rounded-full bg-gray-200" />
+                    ))}
+                </div>
+            </div>
+
+            {/* Links Skeleton */}
+            <div className="w-full space-y-4">
+                {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="w-full h-[72px] rounded-[1.25rem] bg-gray-200" />
+                ))}
+            </div>
+
+            {/* Project Card Skeleton */}
+             <div className="w-full mt-12">
+                 <div className="w-full h-24 rounded-[1.5rem] bg-gray-200" />
+             </div>
+
+        </div>
+      </div>
+    );
+};
+
+// --- Sub Components ---
+
+const ProjectsListModal: React.FC<{ projects: ProjectItem[]; onClose: () => void; isLightTheme: boolean }> = ({ projects, onClose, isLightTheme }) => {
+    const [translateY, setTranslateY] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const startY = useRef(0);
+    const modalContentRef = useRef<HTMLDivElement>(null);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        // Only trigger drag if we are at the top of the scroll container
+        if (modalContentRef.current?.scrollTop === 0) {
+            setIsDragging(true);
+            startY.current = e.touches[0].clientY;
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging) return;
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - startY.current;
+        
+        // Only allow dragging down
+        if (diff > 0) {
+            setTranslateY(diff);
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        if (translateY > 100) {
+            onClose();
+        } else {
+            setTranslateY(0);
+        }
+    };
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+            {/* Backdrop */}
+            <div 
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" 
+                onClick={onClose}
+            />
+            
+            {/* Modal Sheet */}
+            <div 
+                className={`
+                    relative w-full max-w-lg mx-auto flex flex-col
+                    rounded-t-[2rem] sm:rounded-2xl shadow-2xl overflow-hidden
+                    transform transition-transform duration-300 ease-out
+                    ${isLightTheme ? 'bg-white text-gray-900' : 'bg-[#121212] text-white border border-white/10'}
+                `}
+                style={{ 
+                    transform: `translateY(${translateY}px)`,
+                    maxHeight: '85vh',
+                    height: '80vh',
+                    transition: isDragging ? 'none' : undefined 
+                }}
+            >
+                {/* Drag Handle & Header */}
+                <div 
+                    className={`
+                        w-full pt-4 pb-4 px-6 flex flex-col items-center shrink-0 cursor-grab active:cursor-grabbing touch-none z-10
+                        ${isLightTheme ? 'bg-white border-b border-gray-100' : 'bg-[#121212] border-b border-white/5'}
+                    `}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    <div className="w-12 h-1.5 rounded-full bg-gray-300/50 mb-4" />
+                    <div className="w-full flex items-center justify-between">
+                         <h2 className="text-lg font-bold">Featured Projects</h2>
+                         <button 
+                            onClick={onClose}
+                            className={`p-2 rounded-full transition-colors ${isLightTheme ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/10 hover:bg-white/20'}`}
+                        >
+                            <X className="w-4 h-4 opacity-70" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Scrollable Content */}
+                <div ref={modalContentRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-8">
+                    {projects.map((project, idx) => (
+                        <div key={project.id || idx} className="w-full group">
+                            {/* Project Header */}
+                            <div className="mb-4">
+                                {project.thumbnail && (
+                                    <div className="rounded-xl overflow-hidden aspect-video w-full shadow-lg mb-4 ring-1 ring-black/5 dark:ring-white/10">
+                                        <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                    </div>
+                                )}
+                                
+                                <div className="flex flex-col gap-2">
+                                    {project.tags && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {project.tags.map(tag => (
+                                                <span key={tag} className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-md ${isLightTheme ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-white/80'}`}>
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <h3 className="text-xl font-bold leading-tight break-words">{project.title}</h3>
+                                </div>
+                            </div>
+                            
+                            {/* Description */}
+                            <p className={`text-sm leading-relaxed mb-4 break-words ${isLightTheme ? 'text-gray-600' : 'text-gray-300'}`}>
+                                {project.description}
+                            </p>
+
+                            {/* Action Button */}
+                            {project.url && (
+                                <a 
+                                    href={project.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`
+                                        flex items-center justify-center gap-2 w-full py-3 rounded-lg font-semibold text-sm transition-all active:scale-[0.98]
+                                        ${isLightTheme 
+                                            ? 'bg-gray-50 text-gray-900 border border-gray-200 hover:bg-gray-100' 
+                                            : 'bg-white/10 text-white border border-white/5 hover:bg-white/20'}
+                                    `}
+                                >
+                                    <span>View Details</span>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                            )}
+                            
+                            {/* Divider if not last */}
+                            {idx < projects.length - 1 && (
+                                <div className={`h-px w-full mt-8 ${isLightTheme ? 'bg-gray-100' : 'bg-white/5'}`} />
+                            )}
+                        </div>
+                    ))}
+                    
+                    {/* Bottom Padding */}
+                    <div className="h-4" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface LinkCardProps {
+  link: LinkItem;
+  theme: UserProfile['theme'];
+  index: number;
+}
+
+const LinkCard: React.FC<LinkCardProps> = ({ link, theme, index }) => {
+  const animationStyle = { 
+      animationDelay: `${0.1 + (index * 0.05)}s`,
+      animationFillMode: 'both' 
+  };
+
+  if (link.featured) {
+    return <FeaturedLinkItem link={link} theme={theme} style={animationStyle} />;
+  }
+
+  return <StandardLinkItem link={link} theme={theme} style={animationStyle} />;
+};
+
+const FeaturedLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; style: React.CSSProperties }> = ({ link, theme, style }) => {
+  const classes = getButtonClasses(theme, true);
+  
+  return (
+    <a 
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${classes} block group animate-slide-up transform-gpu overflow-hidden`}
+      style={style}
+    >
+        <div className="relative aspect-[2/1] md:aspect-[2.4/1] w-full">
+          {link.thumbnail ? (
+            <>
+                <img 
+                    src={link.thumbnail} 
+                    alt={link.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-90" />
+            </>
+          ) : (
+             <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                <div className="opacity-10 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
+             </div>
+          )}
+          
+          <div className="absolute bottom-0 left-0 w-full p-5 md:p-6 flex flex-row items-end justify-between">
+            <div className="flex-1 mr-4 min-w-0">
+                <h3 className="text-white font-bold text-lg leading-tight mb-1 drop-shadow-sm truncate">{link.title}</h3>
+                {link.description && (
+                <p className="text-white/80 text-xs md:text-sm line-clamp-2 font-medium drop-shadow-sm break-words">{link.description}</p>
+                )}
+            </div>
+            <div className="bg-white/20 backdrop-blur-md p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 duration-300 shrink-0">
+                <ExternalLink className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+    </a>
+  );
+};
+
+const StandardLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; style: React.CSSProperties }> = ({ link, theme, style }) => {
+  const classes = getButtonClasses(theme, false);
+  const isCleanTheme = theme.type === ThemeType.CleanWhite;
+  
+  return (
+    <a 
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${classes} animate-slide-up group py-3.5 px-4`}
+      style={style}
+    >
+        {/* Left Slot: Thumbnail or Icon */}
+        <div className="flex items-center justify-center w-10 h-10 shrink-0 mr-3">
+             {link.thumbnail ? (
+                <div className="w-10 h-10 rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5">
+                    <img src={link.thumbnail} alt="" className="w-full h-full object-cover" />
+                </div>
+             ) : link.icon ? (
+                <div className={`transition-transform duration-300 group-hover:scale-110 ${isCleanTheme ? 'text-gray-700' : 'text-white/90'}`}>
+                    {getGenericIcon(link.icon, "w-6 h-6")}
+                </div>
+            ) : null}
+        </div>
+
+        {/* Center Slot: Title */}
+        <div className="flex-1 flex flex-col justify-center text-center sm:text-left min-w-0">
+            <span className="font-semibold text-sm md:text-[15px] truncate px-1">
+                {link.title}
+            </span>
+            {link.description && !link.thumbnail && (
+                 <span className={`text-[11px] truncate px-1 opacity-70 ${isCleanTheme ? 'text-gray-500' : 'text-white'}`}>
+                    {link.description}
+                 </span>
+            )}
+        </div>
+      
+        {/* Right Slot: Action Icon */}
+        <div className={`w-10 h-10 shrink-0 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-1 ${isCleanTheme ? 'text-gray-400' : 'text-white/50'}`}>
+            <ChevronRight className="w-5 h-5" />
+        </div>
+    </a>
+  );
+};
+
+export default ProfileView;
