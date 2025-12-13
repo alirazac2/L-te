@@ -1,3 +1,4 @@
+
 import { UserProfile, ThemeType, SocialPlatform } from '../types';
 import { fetchProfileDataOnChain, fetchAllUsernames } from './blockchain';
 
@@ -14,7 +15,15 @@ const DEMO_PROFILES: Record<string, UserProfile> = {
     links: [
         { id: '1', title: 'Blockchain Explorer', url: 'https://testnet.kitescan.ai', icon: 'Globe' }
     ],
-    projects: []
+    sections: [
+        {
+            id: 's1',
+            title: 'Featured Projects',
+            description: 'Check out my work',
+            icon: 'Layers',
+            items: []
+        }
+    ]
   }
 };
 

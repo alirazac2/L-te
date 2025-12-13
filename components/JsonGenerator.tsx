@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UserProfile, ThemeType, SocialPlatform } from '../types';
 import { Copy, Check, Download } from 'lucide-react';
@@ -36,22 +37,22 @@ const JsonGenerator: React.FC = () => {
           description: "Watch my latest creation"
         }
       ],
-      projects: [
+      sections: [
         {
-            id: "p1",
-            title: "Project One",
-            description: "Visual project",
-            thumbnail: "https://picsum.photos/600/400",
-            url: "https://github.com/yourhandle/project-1",
-            tags: ["React", "UI"]
-        },
-        {
-            id: "p2",
-            title: "Project Two",
-            description: "Icon based",
-            icon: "Rocket",
-            url: "https://github.com/yourhandle/project-2",
-            tags: ["Backend", "Node"]
+            id: "s1",
+            title: "Featured Works",
+            description: "Visual Design",
+            icon: "Layers",
+            items: [
+                {
+                    id: "p1",
+                    title: "Project One",
+                    description: "Visual project description",
+                    thumbnail: "https://picsum.photos/600/400",
+                    url: "https://github.com/yourhandle/project-1",
+                    tags: ["React", "UI"]
+                }
+            ]
         }
       ]
     };

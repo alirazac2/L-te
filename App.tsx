@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import ProfileView from './components/ProfileView';
-import ProjectsPage from './components/ProjectsPage';
 import CreateProfilePage from './components/CreateProfilePage';
+import NotFound from './components/NotFound';
 import { Footer } from './components/Footer';
 import { searchProfiles } from './services/dataService';
 import { connectWallet, checkWalletConnection } from './services/blockchain';
@@ -215,14 +215,14 @@ const Landing: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/new" element={<CreateProfilePage />} />
         <Route path="/:username" element={<ProfileView />} />
-        <Route path="/:username/projects" element={<ProjectsPage />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 

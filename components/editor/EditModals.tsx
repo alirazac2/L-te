@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SocialPlatform } from '../../types';
 import { X, Check, ChevronUp, ChevronDown, ArrowLeft, Search } from 'lucide-react';
@@ -11,11 +12,12 @@ import {
   SOCIAL_BASE_URLS 
 } from './editorUtils';
 
-type ModalType = 'link' | 'project' | 'social' | 'project_trigger' | null;
+type ModalType = 'link' | 'social' | 'section_trigger' | 'section_item' | null;
 
 interface ModalState {
     type: ModalType;
     index: number | null;
+    sectionIndex?: number | null;
     data: any;
 }
 
@@ -32,13 +34,10 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
   
-  // MediaType state for Trigger Card: 'icon' | 'image'
-  // (Project items don't use this state anymore, they just have a thumbnail input)
   const [triggerMediaType, setTriggerMediaType] = useState<'icon' | 'image'>('icon');
 
   useEffect(() => {
-    if (modal.type === 'project_trigger' && modal.data) {
-        // Determine initial tab for trigger card
+    if (modal.type === 'section_trigger' && modal.data) {
         if (modal.data.thumbnail) {
             setTriggerMediaType('image');
         } else {
@@ -54,13 +53,7 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
 
   const handleTriggerMediaTypeChange = (type: 'icon' | 'image') => {
       setTriggerMediaType(type);
-      // Optional: Clear the other field when switching? 
-      // The user said "optional nothing anything means it's none".
-      // We'll keep the data in the object but the UI focuses on the selected tab.
       if (type === 'image') {
-          // If switching to image, maybe we clear icon? or just let valid URL take precedence.
-          // For cleanliness let's clear the icon if they start typing an image, 
-          // but for the tab switch we just change the view.
           onUpdateData('icon', ''); 
       } else {
           onUpdateData('thumbnail', '');
@@ -161,12 +154,12 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
             </div>
         )}
 
-        {/* Project Modal (Individual Item) */}
-        {modal.type === 'project' && modal.data && (
+        {/* Section Item Modal */}
+        {modal.type === 'section_item' && modal.data && (
              <div className={MODAL_OVERLAY_CLASS}>
                 <div className={MODAL_CONTENT_CLASS}>
                     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                        <h3 className="font-bold text-lg">{modal.index === null ? 'Add Project' : 'Edit Project'}</h3>
+                        <h3 className="font-bold text-lg">{modal.index === null ? 'Add Item' : 'Edit Item'}</h3>
                         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
                     </div>
                     <div className="p-6 space-y-5 overflow-y-auto">
@@ -179,7 +172,7 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                                 value={modal.data.title} 
                                 onChange={e => onUpdateData('title', e.target.value)} 
                                 className={errors.title ? INPUT_ERROR_CLASS : INPUT_CLASS} 
-                                placeholder="Project Name"
+                                placeholder="Item Name"
                             />
                              {errors.title && <span className="text-xs text-red-500 font-medium">{errors.title}</span>}
                         </div>
@@ -191,13 +184,12 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                                 value={modal.data.description} 
                                 onChange={e => onUpdateData('description', e.target.value)} 
                                 className={INPUT_CLASS} 
-                                placeholder="Project description"
+                                placeholder="Item description"
                             />
                         </div>
 
-                        {/* ONLY IMAGE for Project Items */}
                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                             <label className={LABEL_CLASS}>Project Image (Optional)</label>
+                             <label className={LABEL_CLASS}>Image (Optional)</label>
                              <input 
                                 type="text" 
                                 value={modal.data.thumbnail || ''} 
@@ -211,7 +203,7 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                         
                         <div className="grid grid-cols-1 gap-4">
                             <div>
-                                <label className={LABEL_CLASS}>Project URL</label>
+                                <label className={LABEL_CLASS}>Link URL</label>
                                 <input 
                                     type="text" 
                                     value={modal.data.url || ''} 
@@ -236,57 +228,49 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                     <div className="p-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50">
                         <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Cancel</button>
                         <button onClick={onSave} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200">
-                            Save Project
+                            Save Item
                         </button>
                     </div>
                 </div>
             </div>
         )}
 
-        {/* Trigger Card Modal */}
-        {modal.type === 'project_trigger' && modal.data && (
+        {/* Section Trigger Modal */}
+        {modal.type === 'section_trigger' && modal.data && (
             <div className={MODAL_OVERLAY_CLASS}>
                 <div className={MODAL_CONTENT_CLASS}>
                     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                        <h3 className="font-bold text-lg">Design Portfolio Button</h3>
+                        <h3 className="font-bold text-lg">{modal.index === null ? 'Create Section' : 'Edit Section Card'}</h3>
                         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
                     </div>
                     <div className="p-6 space-y-5 overflow-y-auto">
                         
                         <div>
-                            <label className={LABEL_CLASS}>Title <span className="text-red-500">*</span></label>
+                            <label className={LABEL_CLASS}>Section Name <span className="text-red-500">*</span></label>
                             <input 
                                 autoFocus 
                                 type="text" 
                                 value={modal.data.title} 
                                 onChange={e => onUpdateData('title', e.target.value)} 
                                 className={errors.title ? INPUT_ERROR_CLASS : INPUT_CLASS} 
-                                placeholder="Featured Projects"
+                                placeholder="e.g. Featured Works"
                             />
                              {errors.title && <span className="text-xs text-red-500 font-medium">{errors.title}</span>}
                         </div>
 
                         <div>
-                            <div className="flex justify-between items-center mb-1.5">
-                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide">Description</label>
-                                <span className={`text-[10px] font-medium ${(modal.data.description?.length || 0) > 15 ? 'text-red-500' : 'text-gray-400'}`}>
-                                    {modal.data.description?.length || 0}/15
-                                </span>
-                            </div>
+                            <label className={LABEL_CLASS}>Short Description</label>
                             <input 
                                 type="text"
                                 value={modal.data.description} 
                                 onChange={e => onUpdateData('description', e.target.value)} 
                                 className={errors.description ? INPUT_ERROR_CLASS : INPUT_CLASS} 
-                                maxLength={15}
-                                placeholder="Short label..."
+                                placeholder="Click to explore..."
                             />
-                            {errors.description && <span className="text-xs text-red-500 font-medium">{errors.description}</span>}
                         </div>
 
-                        {/* Media Selector: Icon OR Image */}
                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                             <label className={LABEL_CLASS}>Button Visual</label>
+                             <label className={LABEL_CLASS}>Section Cover Visual</label>
                              <div className="flex p-1 bg-gray-200 rounded-lg mb-4">
                                 <button 
                                     onClick={() => handleTriggerMediaTypeChange('icon')}
@@ -342,7 +326,7 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                     <div className="p-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50">
                         <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Cancel</button>
                         <button onClick={onSave} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200">
-                            Update Button
+                            {modal.index === null ? 'Create Section' : 'Update Section'}
                         </button>
                     </div>
                 </div>

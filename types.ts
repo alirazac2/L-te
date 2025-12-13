@@ -1,3 +1,4 @@
+
 export enum SocialPlatform {
   Instagram = 'instagram',
   Twitter = 'twitter',
@@ -14,7 +15,12 @@ export enum ThemeType {
   CleanWhite = 'clean-white',
   GradientBlue = 'gradient-blue',
   SunsetVibe = 'sunset-vibe',
-  ForestGlass = 'forest-glass'
+  ForestGlass = 'forest-glass',
+  CyberPunk = 'cyber-punk',
+  SoftPastel = 'soft-pastel',
+  RetroPixel = 'retro-pixel',
+  NeoBrutalism = 'neo-brutalism',
+  LuxuryGold = 'luxury-gold'
 }
 
 export interface SocialLink {
@@ -32,7 +38,7 @@ export interface LinkItem {
   description?: string;
 }
 
-export interface ProjectItem {
+export interface SectionItem {
   id: string;
   title: string;
   description: string;
@@ -42,11 +48,13 @@ export interface ProjectItem {
   tags?: string[];
 }
 
-export interface ProjectCardConfig {
+export interface SectionConfig {
+  id: string;
   title: string;
   description: string;
   thumbnail?: string;
   icon?: string;
+  items: SectionItem[];
 }
 
 export interface ProfileTheme {
@@ -65,6 +73,5 @@ export interface UserProfile {
   theme: ProfileTheme;
   socials: SocialLink[];
   links: LinkItem[];
-  projects?: ProjectItem[];
-  projectCard?: ProjectCardConfig; // Configuration for the main button
+  sections: SectionConfig[]; // Up to 4 sections
 }

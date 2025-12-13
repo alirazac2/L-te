@@ -1,7 +1,8 @@
+
 import { ethers } from 'ethers';
 import { CONTRACTS, kiteAI } from './web3Config';
 import { ProfileContractABI, ProfileHubABI } from './abis';
-import { UserProfile } from '../types';
+import { UserProfile, ThemeType, SectionConfig } from '../types';
 
 declare global {
   interface Window {
@@ -129,7 +130,63 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
         const jsonString = await profileContract.getUserData();
         
         if (!jsonString) return null;
-        return JSON.parse(jsonString) as UserProfile;
+        
+        // Safety: ensure parsing doesn't crash app if JSON is bad
+        let rawData;
+        try {
+            rawData = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error("JSON parse error for user:", username, parseError);
+            return null;
+        }
+
+        if (typeof rawData !== 'object' || rawData === null) return null;
+
+        // Strict sanitization to prevent UI crashes on null items
+        const safeArray = (arr: any) => Array.isArray(arr) ? arr.filter((i: any) => i && typeof i === 'object') : [];
+
+        // --- Migration Logic: Projects -> Sections ---
+        let sections: SectionConfig[] = safeArray(rawData.sections);
+
+        // If no sections but old projects exist, migrate them
+        if (sections.length === 0 && (rawData.projects || rawData.projectCard)) {
+             const legacyProjects = safeArray(rawData.projects).map((p: any) => ({
+                ...p,
+                tags: Array.isArray(p.tags) ? p.tags.filter((t: any) => typeof t === 'string') : []
+             }));
+             
+             sections.push({
+                 id: 'legacy-migration',
+                 title: rawData.projectCard?.title || 'Projects',
+                 description: rawData.projectCard?.description || 'My Portfolio',
+                 thumbnail: rawData.projectCard?.thumbnail,
+                 icon: rawData.projectCard?.icon || 'Layers',
+                 items: legacyProjects
+             });
+        }
+        
+        // Sanitize Items within Sections
+        sections = sections.map(s => ({
+            ...s,
+            items: safeArray(s.items).map((p: any) => ({
+                 ...p,
+                 tags: Array.isArray(p.tags) ? p.tags.filter((t: any) => typeof t === 'string') : []
+            }))
+        }));
+
+        const safeData: UserProfile = {
+            username: rawData.username || username,
+            displayName: rawData.displayName || username,
+            bio: rawData.bio || '',
+            avatarUrl: rawData.avatarUrl || '',
+            verified: !!rawData.verified,
+            theme: (rawData.theme && typeof rawData.theme === 'object') ? rawData.theme : { type: ThemeType.ModernBlack },
+            socials: safeArray(rawData.socials),
+            links: safeArray(rawData.links),
+            sections: sections
+        };
+
+        return safeData;
     } catch (e) {
         console.error(`Failed to fetch on-chain data for ${username}`, e);
         return null;
