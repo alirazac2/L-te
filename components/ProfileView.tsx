@@ -91,6 +91,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
   }
 
   const isLightTheme = profile.theme.type === ThemeType.CleanWhite;
+  const projectCard = profile.projectCard || { title: 'Featured Projects', description: 'Explore my portfolio', icon: 'Layers' };
   
   return (
     <ThemeWrapper theme={profile.theme}>
@@ -164,7 +165,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                 ))}
             </main>
 
-            {/* Single Projects Trigger Card - Separated Solo */}
+            {/* Customizable Projects Trigger Card */}
             {profile.projects && profile.projects.length > 0 && (
                 <section className="w-full z-10 mt-8 mb-8 relative animate-fade-in delay-200">
                     <div className={`flex items-center gap-4 mb-5 opacity-40 px-2 ${isLightTheme ? 'text-black' : 'text-white'}`}>
@@ -190,20 +191,29 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                         `}>
                             <div className="flex items-center gap-5 min-w-0">
                                 <div className={`
-                                    w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner
+                                    w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner overflow-hidden
                                     ${isLightTheme 
                                         ? 'bg-gradient-to-br from-indigo-50 to-white text-indigo-600' 
                                         : 'bg-gradient-to-br from-white/10 to-transparent text-white'}
                                 `}>
-                                    <Layers className="w-7 h-7" />
+                                    {projectCard.thumbnail ? (
+                                        <img src={projectCard.thumbnail} alt="" className="w-full h-full object-cover" />
+                                    ) : projectCard.icon ? (
+                                        getGenericIcon(projectCard.icon, "w-7 h-7")
+                                    ) : (
+                                        // Nothing selected (transparent/empty), or fallback
+                                        <Layers className="w-7 h-7 opacity-20" />
+                                    )}
                                 </div>
                                 <div className="text-left min-w-0">
-                                    <h3 className={`font-bold text-lg ${isLightTheme ? 'text-gray-900' : 'text-white'}`}>
-                                        Featured Projects
+                                    <h3 className={`font-bold text-lg leading-tight ${isLightTheme ? 'text-gray-900' : 'text-white'}`}>
+                                        {projectCard.title}
                                     </h3>
-                                    <p className={`text-xs opacity-60 mt-0.5 ${isLightTheme ? 'text-gray-500' : 'text-white/80'}`}>
-                                        Explore {profile.projects.length} collection{profile.projects.length !== 1 ? 's' : ''}
-                                    </p>
+                                    {projectCard.description && (
+                                        <p className={`text-xs opacity-60 mt-1 truncate ${isLightTheme ? 'text-gray-500' : 'text-white/80'}`}>
+                                            {projectCard.description}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className={`
@@ -230,6 +240,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                     projects={profile.projects} 
                     onClose={() => setShowProjectsModal(false)} 
                     isLightTheme={isLightTheme}
+                    triggerTitle={projectCard.title}
                 />
             )}
 
@@ -350,7 +361,7 @@ const ProfileSkeleton: React.FC = () => {
 
 // --- Sub Components ---
 
-const ProjectsListModal: React.FC<{ projects: ProjectItem[]; onClose: () => void; isLightTheme: boolean }> = ({ projects, onClose, isLightTheme }) => {
+const ProjectsListModal: React.FC<{ projects: ProjectItem[]; onClose: () => void; isLightTheme: boolean; triggerTitle: string }> = ({ projects, onClose, isLightTheme, triggerTitle }) => {
     const [translateY, setTranslateY] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const startY = useRef(0);
@@ -427,7 +438,7 @@ const ProjectsListModal: React.FC<{ projects: ProjectItem[]; onClose: () => void
                 >
                     <div className="w-12 h-1.5 rounded-full bg-gray-300/50 mb-4" />
                     <div className="w-full flex items-center justify-between">
-                         <h2 className="text-lg font-bold">Featured Projects</h2>
+                         <h2 className="text-lg font-bold">{triggerTitle}</h2>
                          <button 
                             onClick={onClose}
                             className={`p-2 rounded-full transition-colors ${isLightTheme ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/10 hover:bg-white/20'}`}
@@ -443,15 +454,9 @@ const ProjectsListModal: React.FC<{ projects: ProjectItem[]; onClose: () => void
                         <div key={project.id || idx} className="w-full group">
                             {/* Project Header */}
                             <div className="mb-4">
-                                {(project.thumbnail || project.icon) && (
+                                {project.thumbnail && (
                                     <div className={`rounded-xl overflow-hidden aspect-video w-full shadow-lg mb-4 flex items-center justify-center relative ${isLightTheme ? 'bg-gray-50 border border-gray-100' : 'bg-white/5 border border-white/5'}`}>
-                                        {project.thumbnail ? (
-                                            <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                        ) : project.icon ? (
-                                            <div className="transform transition-transform duration-500 group-hover:scale-110">
-                                                {getGenericIcon(project.icon, `w-20 h-20 opacity-80 ${isLightTheme ? 'text-indigo-500' : 'text-white'}`)}
-                                            </div>
-                                        ) : null}
+                                        <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                     </div>
                                 )}
                                 

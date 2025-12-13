@@ -42,6 +42,13 @@ export interface ProjectItem {
   tags?: string[];
 }
 
+export interface ProjectCardConfig {
+  title: string;
+  description: string;
+  thumbnail?: string;
+  icon?: string;
+}
+
 export interface ProfileTheme {
   type: ThemeType;
   customBackground?: string; // Optional override
@@ -59,4 +66,5 @@ export interface UserProfile {
   socials: SocialLink[];
   links: LinkItem[];
   projects?: ProjectItem[];
+  projectCard?: ProjectCardConfig; // Configuration for the main button
 }

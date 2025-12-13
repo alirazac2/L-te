@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { HashRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import ProfileView from './components/ProfileView';
 import CreateProfilePage from './components/CreateProfilePage';
 import { Footer } from './components/Footer';
@@ -214,13 +214,13 @@ const Landing: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/new" element={<CreateProfilePage />} />
         <Route path="/:username" element={<ProfileView />} />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   );
 };
 

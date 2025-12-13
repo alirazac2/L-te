@@ -29,12 +29,17 @@ const DEFAULT_PROFILE: UserProfile = {
   links: [
     { id: '1', title: 'My First Link', url: 'https://example.com', icon: 'Link' }
   ],
-  projects: []
+  projects: [],
+  projectCard: {
+      title: 'Featured Projects',
+      description: 'See my work',
+      icon: 'Layers'
+  }
 };
 
 // --- Types ---
 
-type ModalType = 'link' | 'project' | 'social' | null;
+type ModalType = 'link' | 'project' | 'social' | 'project_trigger' | null;
 
 interface ModalState {
     type: ModalType;
@@ -114,8 +119,13 @@ const CreateProfilePage: React.FC = () => {
               setHasRegisteredProfile(true);
               const data = await fetchProfileDataOnChain(existingUsername);
               if (data) {
-                  setProfile(data);
-                  setInitialProfileJson(JSON.stringify(data));
+                  // Ensure projectCard exists for older profiles
+                  const cleanData = {
+                      ...data,
+                      projectCard: data.projectCard || DEFAULT_PROFILE.projectCard
+                  };
+                  setProfile(cleanData);
+                  setInitialProfileJson(JSON.stringify(cleanData));
               } else {
                   const recoveryProfile = {...DEFAULT_PROFILE, username: existingUsername};
                   setProfile(recoveryProfile);
@@ -236,6 +246,7 @@ const CreateProfilePage: React.FC = () => {
           if (type === 'link') data = { id: Date.now().toString(), title: '', url: '', icon: 'Link', featured: false };
           if (type === 'project') data = { id: Date.now().toString(), title: '', description: '', url: '', tags: [], icon: 'Folder' };
           if (type === 'social') data = { platform: SocialPlatform.Instagram, url: '' };
+          if (type === 'project_trigger') data = { ...profile.projectCard } || { title: 'Featured Projects', description: 'See more', icon: 'Layers' };
       }
       setModal({ type, index, data });
   };
@@ -265,14 +276,16 @@ const CreateProfilePage: React.FC = () => {
       } 
       else if (modal.type === 'project') {
           if (!modal.data.title?.trim()) newErrors.title = "Title is required";
-          
-          // Description max 15 chars
+          // Relaxed validation for individual projects as per user feedback
+          if (modal.data.thumbnail && !isValidUrl(modal.data.thumbnail)) newErrors.thumbnail = "Invalid URL format";
+          if (modal.data.url && !isValidUrl(modal.data.url)) newErrors.url = "Invalid URL format";
+      }
+      else if (modal.type === 'project_trigger') {
+          if (!modal.data.title?.trim()) newErrors.title = "Title is required";
           if (modal.data.description && modal.data.description.length > 15) {
               newErrors.description = "Max 15 characters allowed";
           }
-
           if (modal.data.thumbnail && !isValidUrl(modal.data.thumbnail)) newErrors.thumbnail = "Invalid URL format";
-          if (modal.data.url && !isValidUrl(modal.data.url)) newErrors.url = "Invalid URL format";
       }
       else if (modal.type === 'social') {
            const val = modal.data.url || '';
@@ -297,6 +310,8 @@ const CreateProfilePage: React.FC = () => {
               if (modal.index !== null) list[modal.index] = modal.data;
               else list.push(modal.data);
               newData.projects = list;
+          } else if (modal.type === 'project_trigger') {
+              newData.projectCard = modal.data;
           } else if (modal.type === 'social') {
               const rawUrl = modal.data.url.trim();
               const platform = modal.data.platform;
@@ -515,10 +530,12 @@ const CreateProfilePage: React.FC = () => {
 
                 <ProjectsEditor 
                   projects={profile.projects || []}
+                  projectCard={profile.projectCard || { title: 'Featured Projects', description: 'See more', icon: 'Layers' }}
                   onAdd={() => openModal('project', null)}
                   onEdit={(idx) => openModal('project', idx)}
                   onDelete={(idx) => deleteItem(idx, 'project')}
                   onMove={(idx, dir) => moveItem(idx, dir, 'project')}
+                  onEditTrigger={() => openModal('project_trigger', null)}
                 />
 
                 <hr className="border-gray-100" />

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SocialPlatform } from '../../types';
-import { X, Check, ChevronUp, ChevronDown, ArrowLeft, Search, Image as ImageIcon, Box } from 'lucide-react';
+import { X, Check, ChevronUp, ChevronDown, ArrowLeft, Search } from 'lucide-react';
 import { getGenericIcon, getSocialIcon, ICON_OPTIONS } from '../Icons';
 import { 
   INPUT_CLASS, 
@@ -11,7 +11,7 @@ import {
   SOCIAL_BASE_URLS 
 } from './editorUtils';
 
-type ModalType = 'link' | 'project' | 'social' | null;
+type ModalType = 'link' | 'project' | 'social' | 'project_trigger' | null;
 
 interface ModalState {
     type: ModalType;
@@ -32,38 +32,39 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
   
-  // For Projects: 'image' | 'icon' | 'none'
-  // Determine initial state based on data
-  const getInitialMediaType = () => {
-      if (modal.data?.thumbnail) return 'image';
-      if (modal.data?.icon) return 'icon';
-      return 'none';
-  };
-  const [projectMediaType, setProjectMediaType] = useState<'image' | 'icon' | 'none'>('none');
+  // MediaType state for Trigger Card: 'icon' | 'image'
+  // (Project items don't use this state anymore, they just have a thumbnail input)
+  const [triggerMediaType, setTriggerMediaType] = useState<'icon' | 'image'>('icon');
 
-  // Sync state when modal opens
-  React.useEffect(() => {
-    if (modal.type === 'project' && modal.data) {
-        setProjectMediaType(getInitialMediaType());
+  useEffect(() => {
+    if (modal.type === 'project_trigger' && modal.data) {
+        // Determine initial tab for trigger card
+        if (modal.data.thumbnail) {
+            setTriggerMediaType('image');
+        } else {
+            setTriggerMediaType('icon');
+        }
     }
-  }, [modal.type, modal.index]); // Re-run when modal type or index changes (new modal opened)
+  }, [modal.type]); 
 
-  // Handle Icon Picker specific logic wrapper
   const handleOpenIconPicker = () => {
       setShowIconPicker(true);
       setIconSearch('');
   };
 
-  const handleMediaTypeChange = (type: 'image' | 'icon' | 'none') => {
-      setProjectMediaType(type);
-      if (type === 'none') {
+  const handleTriggerMediaTypeChange = (type: 'icon' | 'image') => {
+      setTriggerMediaType(type);
+      // Optional: Clear the other field when switching? 
+      // The user said "optional nothing anything means it's none".
+      // We'll keep the data in the object but the UI focuses on the selected tab.
+      if (type === 'image') {
+          // If switching to image, maybe we clear icon? or just let valid URL take precedence.
+          // For cleanliness let's clear the icon if they start typing an image, 
+          // but for the tab switch we just change the view.
+          onUpdateData('icon', ''); 
+      } else {
           onUpdateData('thumbnail', '');
-          onUpdateData('icon', '');
-      } else if (type === 'image') {
-          onUpdateData('icon', '');
-      } else if (type === 'icon') {
-          onUpdateData('thumbnail', '');
-          if (!modal.data.icon) onUpdateData('icon', 'Folder'); // Default icon
+          if (!modal.data.icon) onUpdateData('icon', 'Layers');
       }
   };
 
@@ -160,9 +161,9 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
             </div>
         )}
 
-        {/* Project Modal */}
+        {/* Project Modal (Individual Item) */}
         {modal.type === 'project' && modal.data && (
-            <div className={MODAL_OVERLAY_CLASS}>
+             <div className={MODAL_OVERLAY_CLASS}>
                 <div className={MODAL_CONTENT_CLASS}>
                     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                         <h3 className="font-bold text-lg">{modal.index === null ? 'Add Project' : 'Edit Project'}</h3>
@@ -170,7 +171,6 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                     </div>
                     <div className="p-6 space-y-5 overflow-y-auto">
                         
-                        {/* Title (Required) */}
                         <div>
                             <label className={LABEL_CLASS}>Title <span className="text-red-500">*</span></label>
                             <input 
@@ -179,91 +179,36 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                                 value={modal.data.title} 
                                 onChange={e => onUpdateData('title', e.target.value)} 
                                 className={errors.title ? INPUT_ERROR_CLASS : INPUT_CLASS} 
-                                placeholder="My Awesome Project"
+                                placeholder="Project Name"
                             />
                              {errors.title && <span className="text-xs text-red-500 font-medium">{errors.title}</span>}
                         </div>
 
-                        {/* Description (Max 15) */}
                         <div>
-                            <div className="flex justify-between items-center mb-1.5">
-                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide">Description</label>
-                                <span className={`text-[10px] font-medium ${(modal.data.description?.length || 0) > 15 ? 'text-red-500' : 'text-gray-400'}`}>
-                                    {modal.data.description?.length || 0}/15
-                                </span>
-                            </div>
+                            <label className={LABEL_CLASS}>Description</label>
                             <input 
                                 type="text"
                                 value={modal.data.description} 
                                 onChange={e => onUpdateData('description', e.target.value)} 
-                                className={errors.description ? INPUT_ERROR_CLASS : INPUT_CLASS} 
-                                maxLength={15}
-                                placeholder="Short tag..."
+                                className={INPUT_CLASS} 
+                                placeholder="Project description"
                             />
-                            {errors.description && <span className="text-xs text-red-500 font-medium">{errors.description}</span>}
                         </div>
 
-                        {/* Media Selector */}
+                        {/* ONLY IMAGE for Project Items */}
                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                             <label className={LABEL_CLASS}>Card Media</label>
-                             <div className="flex p-1 bg-gray-200 rounded-lg mb-4">
-                                <button 
-                                    onClick={() => handleMediaTypeChange('none')}
-                                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${projectMediaType === 'none' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                >
-                                    None
-                                </button>
-                                <button 
-                                    onClick={() => handleMediaTypeChange('icon')}
-                                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${projectMediaType === 'icon' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                >
-                                    Icon
-                                </button>
-                                <button 
-                                    onClick={() => handleMediaTypeChange('image')}
-                                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${projectMediaType === 'image' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-                                >
-                                    Image
-                                </button>
-                             </div>
-
-                             {projectMediaType === 'image' && (
-                                <div className="animate-fade-in">
-                                    <label className={LABEL_CLASS}>Thumbnail URL</label>
-                                    <input 
-                                        type="text" 
-                                        value={modal.data.thumbnail || ''} 
-                                        onChange={e => onUpdateData('thumbnail', e.target.value)} 
-                                        className={errors.thumbnail ? INPUT_ERROR_CLASS : INPUT_CLASS} 
-                                        placeholder="https://..."
-                                    />
-                                    {errors.thumbnail && <span className="text-xs text-red-500 font-medium">{errors.thumbnail}</span>}
-                                </div>
-                             )}
-
-                             {projectMediaType === 'icon' && (
-                                <div className="animate-fade-in">
-                                    <label className={LABEL_CLASS}>Select Icon</label>
-                                    <button 
-                                        onClick={handleOpenIconPicker}
-                                        className="w-full mt-1 p-3 bg-white border border-gray-200 rounded-lg flex items-center justify-between hover:border-indigo-500 hover:ring-2 hover:ring-indigo-50 transition-all group"
-                                     >
-                                         <div className="flex items-center gap-3">
-                                             <div className="w-10 h-10 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                                                 {getGenericIcon(modal.data.icon || 'Folder', "w-6 h-6")}
-                                             </div>
-                                             <div className="text-left">
-                                                 <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Selected</div>
-                                                 <div className="font-semibold text-gray-900">{modal.data.icon || 'Folder'}</div>
-                                             </div>
-                                         </div>
-                                         <div className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full">CHANGE</div>
-                                     </button>
-                                </div>
-                             )}
+                             <label className={LABEL_CLASS}>Project Image (Optional)</label>
+                             <input 
+                                type="text" 
+                                value={modal.data.thumbnail || ''} 
+                                onChange={e => onUpdateData('thumbnail', e.target.value)} 
+                                className={errors.thumbnail ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                placeholder="https://..."
+                            />
+                            {errors.thumbnail && <span className="text-xs text-red-500 font-medium">{errors.thumbnail}</span>}
+                            <p className="text-[10px] text-gray-400 mt-1">Leave empty for no image.</p>
                         </div>
                         
-                        {/* URL & Tags */}
                         <div className="grid grid-cols-1 gap-4">
                             <div>
                                 <label className={LABEL_CLASS}>Project URL</label>
@@ -290,7 +235,115 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                     </div>
                     <div className="p-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50">
                         <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Cancel</button>
-                        <button onClick={onSave} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200">Save Project</button>
+                        <button onClick={onSave} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200">
+                            Save Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Trigger Card Modal */}
+        {modal.type === 'project_trigger' && modal.data && (
+            <div className={MODAL_OVERLAY_CLASS}>
+                <div className={MODAL_CONTENT_CLASS}>
+                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                        <h3 className="font-bold text-lg">Design Portfolio Button</h3>
+                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
+                    </div>
+                    <div className="p-6 space-y-5 overflow-y-auto">
+                        
+                        <div>
+                            <label className={LABEL_CLASS}>Title <span className="text-red-500">*</span></label>
+                            <input 
+                                autoFocus 
+                                type="text" 
+                                value={modal.data.title} 
+                                onChange={e => onUpdateData('title', e.target.value)} 
+                                className={errors.title ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                placeholder="Featured Projects"
+                            />
+                             {errors.title && <span className="text-xs text-red-500 font-medium">{errors.title}</span>}
+                        </div>
+
+                        <div>
+                            <div className="flex justify-between items-center mb-1.5">
+                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide">Description</label>
+                                <span className={`text-[10px] font-medium ${(modal.data.description?.length || 0) > 15 ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {modal.data.description?.length || 0}/15
+                                </span>
+                            </div>
+                            <input 
+                                type="text"
+                                value={modal.data.description} 
+                                onChange={e => onUpdateData('description', e.target.value)} 
+                                className={errors.description ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                maxLength={15}
+                                placeholder="Short label..."
+                            />
+                            {errors.description && <span className="text-xs text-red-500 font-medium">{errors.description}</span>}
+                        </div>
+
+                        {/* Media Selector: Icon OR Image */}
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                             <label className={LABEL_CLASS}>Button Visual</label>
+                             <div className="flex p-1 bg-gray-200 rounded-lg mb-4">
+                                <button 
+                                    onClick={() => handleTriggerMediaTypeChange('icon')}
+                                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${triggerMediaType === 'icon' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                >
+                                    Icon
+                                </button>
+                                <button 
+                                    onClick={() => handleTriggerMediaTypeChange('image')}
+                                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${triggerMediaType === 'image' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                >
+                                    Image
+                                </button>
+                             </div>
+
+                             {triggerMediaType === 'image' && (
+                                <div className="animate-fade-in">
+                                    <label className={LABEL_CLASS}>Thumbnail URL</label>
+                                    <input 
+                                        type="text" 
+                                        value={modal.data.thumbnail || ''} 
+                                        onChange={e => onUpdateData('thumbnail', e.target.value)} 
+                                        className={errors.thumbnail ? INPUT_ERROR_CLASS : INPUT_CLASS} 
+                                        placeholder="https://..."
+                                    />
+                                    {errors.thumbnail && <span className="text-xs text-red-500 font-medium">{errors.thumbnail}</span>}
+                                    <p className="text-[10px] text-gray-400 mt-1">Leave empty if you don't want an image.</p>
+                                </div>
+                             )}
+
+                             {triggerMediaType === 'icon' && (
+                                <div className="animate-fade-in">
+                                    <label className={LABEL_CLASS}>Select Icon</label>
+                                    <button 
+                                        onClick={handleOpenIconPicker}
+                                        className="w-full mt-1 p-3 bg-white border border-gray-200 rounded-lg flex items-center justify-between hover:border-indigo-500 hover:ring-2 hover:ring-indigo-50 transition-all group"
+                                     >
+                                         <div className="flex items-center gap-3">
+                                             <div className="w-10 h-10 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                                 {getGenericIcon(modal.data.icon || 'Layers', "w-6 h-6")}
+                                             </div>
+                                             <div className="text-left">
+                                                 <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Selected</div>
+                                                 <div className="font-semibold text-gray-900">{modal.data.icon || 'Layers'}</div>
+                                             </div>
+                                         </div>
+                                         <div className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full">CHANGE</div>
+                                     </button>
+                                </div>
+                             )}
+                        </div>
+                    </div>
+                    <div className="p-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50">
+                        <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Cancel</button>
+                        <button onClick={onSave} className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200">
+                            Update Button
+                        </button>
                     </div>
                 </div>
             </div>
@@ -402,6 +455,7 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                             <button 
                                 key={iconName}
                                 onClick={() => {
+                                    // Icon selection always updates the 'icon' field
                                     onUpdateData('icon', iconName);
                                     setShowIconPicker(false);
                                 }}
