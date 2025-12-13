@@ -130,7 +130,24 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
         
         if (!jsonString) return null;
         
-        const rawData = JSON.parse(jsonString);
+        // Safety: ensure parsing doesn't crash app if JSON is bad
+        let rawData;
+        try {
+            rawData = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error("JSON parse error for user:", username, parseError);
+            return null;
+        }
+
+        if (typeof rawData !== 'object' || rawData === null) return null;
+
+        // Sanitize projects to ensure tags is always an array
+        const sanitizedProjects = Array.isArray(rawData.projects) 
+            ? rawData.projects.map((p: any) => ({
+                ...p,
+                tags: Array.isArray(p.tags) ? p.tags : []
+              }))
+            : [];
 
         // Sanitize data to prevent crashes if on-chain data is old or malformed
         const safeData: UserProfile = {
@@ -142,7 +159,7 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
             theme: rawData.theme || { type: ThemeType.ModernBlack },
             socials: Array.isArray(rawData.socials) ? rawData.socials : [],
             links: Array.isArray(rawData.links) ? rawData.links : [],
-            projects: Array.isArray(rawData.projects) ? rawData.projects : [],
+            projects: sanitizedProjects,
             projectCard: rawData.projectCard || { title: 'Featured Projects', description: 'See my work', icon: 'Layers' }
         };
 

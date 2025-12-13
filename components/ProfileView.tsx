@@ -25,9 +25,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
   const profile: UserProfile | null = rawProfile ? {
       ...rawProfile,
       theme: rawProfile.theme || { type: ThemeType.ModernBlack },
-      socials: rawProfile.socials || [],
-      links: rawProfile.links || [],
-      projects: rawProfile.projects || [],
+      socials: Array.isArray(rawProfile.socials) ? rawProfile.socials : [],
+      links: Array.isArray(rawProfile.links) ? rawProfile.links : [],
+      projects: Array.isArray(rawProfile.projects) ? rawProfile.projects : [],
       projectCard: rawProfile.projectCard || { title: 'Featured Projects', description: 'Explore my portfolio', icon: 'Layers' }
   } : null;
 
@@ -323,7 +323,7 @@ interface ProjectsDrawerProps {
 
 const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, profile }) => {
     const isLightTheme = profile?.theme?.type === ThemeType.CleanWhite;
-    const projects = profile?.projects || [];
+    const projects = Array.isArray(profile?.projects) ? profile.projects : []; // Safety check
     const projectCard = profile?.projectCard || { title: 'Projects' };
     const themeType = profile?.theme?.type || ThemeType.ModernBlack;
 
@@ -405,7 +405,8 @@ const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, profil
                                     <div className="flex flex-col gap-3">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-2">
-                                                {project.tags && (
+                                                {/* Ensure tags is an array before mapping */}
+                                                {Array.isArray(project.tags) && project.tags.length > 0 && (
                                                     <div className="flex flex-wrap gap-2">
                                                         {project.tags.map(tag => (
                                                             <span key={tag} className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md ${isLightTheme ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-white/80'}`}>
