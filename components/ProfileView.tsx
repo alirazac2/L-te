@@ -21,14 +21,17 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
   // Determine which profile data to use: prop (preview) or fetched (live)
   const rawProfile = initialData || fetchedProfile;
 
+  // Helper to filter valid objects
+  const validObjects = (arr: any) => Array.isArray(arr) ? arr.filter(i => i && typeof i === 'object') : [];
+
   // Ensure robust default values to prevent crashes if on-chain data is partial/broken
   const profile: UserProfile | null = rawProfile ? {
       ...rawProfile,
-      theme: rawProfile.theme || { type: ThemeType.ModernBlack },
-      socials: Array.isArray(rawProfile.socials) ? rawProfile.socials : [],
-      links: Array.isArray(rawProfile.links) ? rawProfile.links : [],
-      projects: Array.isArray(rawProfile.projects) ? rawProfile.projects : [],
-      projectCard: rawProfile.projectCard || { title: 'Featured Projects', description: 'Explore my portfolio', icon: 'Layers' }
+      theme: (rawProfile.theme && typeof rawProfile.theme === 'object') ? rawProfile.theme : { type: ThemeType.ModernBlack },
+      socials: validObjects(rawProfile.socials),
+      links: validObjects(rawProfile.links),
+      projects: validObjects(rawProfile.projects),
+      projectCard: (rawProfile.projectCard && typeof rawProfile.projectCard === 'object') ? rawProfile.projectCard : { title: 'Featured Projects', description: 'Explore my portfolio', icon: 'Layers' }
   } : null;
 
   useEffect(() => {
@@ -149,13 +152,13 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                     <AvatarWithSkeleton 
                         src={profile.avatarUrl} 
                         alt={profile.displayName} 
-                        fallbackChar={profile.displayName.charAt(0)} 
+                        fallbackChar={(profile.displayName || '?').charAt(0)} 
                     />
                 </div>
 
                 <div className="text-center space-y-2 max-w-sm w-full px-4">
                     <h1 className="text-xl md:text-2xl font-bold tracking-tight flex items-center justify-center gap-1.5 truncate">
-                        {profile.displayName}
+                        {profile.displayName || profile.username}
                         {profile.verified && (
                             <BadgeCheck className="w-5 h-5 text-blue-500 fill-blue-500/10 shrink-0" />
                         )}
@@ -191,7 +194,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
             <main className="w-full space-y-3 z-10">
                 {profile.links.map((link, idx) => (
                     <LinkCard 
-                        key={link.id} 
+                        key={link.id || idx} 
                         link={link} 
                         theme={profile.theme} 
                         index={idx}
@@ -322,10 +325,13 @@ interface ProjectsDrawerProps {
 }
 
 const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, profile }) => {
-    const isLightTheme = profile?.theme?.type === ThemeType.CleanWhite;
-    const projects = Array.isArray(profile?.projects) ? profile.projects : []; // Safety check
-    const projectCard = profile?.projectCard || { title: 'Projects' };
-    const themeType = profile?.theme?.type || ThemeType.ModernBlack;
+    // Safety: ensure objects exist
+    const theme = profile?.theme || { type: ThemeType.ModernBlack };
+    const isLightTheme = theme.type === ThemeType.CleanWhite;
+    // Strict filtering
+    const projects = Array.isArray(profile?.projects) ? profile.projects.filter(p => p && typeof p === 'object') : [];
+    const projectCard = (profile?.projectCard && typeof profile.projectCard === 'object') ? profile.projectCard : { title: 'Projects' };
+    const themeType = theme.type;
 
     // Theme-specific Drawer Backgrounds
     const getDrawerBg = (type: ThemeType) => {
@@ -408,7 +414,7 @@ const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, profil
                                                 {/* Ensure tags is an array before mapping */}
                                                 {Array.isArray(project.tags) && project.tags.length > 0 && (
                                                     <div className="flex flex-wrap gap-2">
-                                                        {project.tags.map(tag => (
+                                                        {project.tags.map((tag: any) => (
                                                             <span key={tag} className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md ${isLightTheme ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-white/80'}`}>
                                                                 {tag}
                                                             </span>

@@ -9,7 +9,10 @@ interface ThemeWrapperProps {
 export const ThemeWrapper: React.FC<ThemeWrapperProps> = ({ theme, children }) => {
   let containerClasses = "min-h-screen w-full transition-colors duration-500 ease-in-out font-sans relative";
   
-  switch (theme.type) {
+  // Safe access default
+  const type = theme?.type || ThemeType.ModernBlack;
+  
+  switch (type) {
     case ThemeType.ModernBlack:
       containerClasses += " bg-[#0a0a0a] text-white";
       break;
@@ -30,16 +33,16 @@ export const ThemeWrapper: React.FC<ThemeWrapperProps> = ({ theme, children }) =
       containerClasses += " bg-neutral-100 text-neutral-900";
   }
 
-  // Allow custom override if provided in JSON
+  // Allow custom override if provided in JSON, safely
   const customStyle: React.CSSProperties = {
-    ...(theme.customBackground ? { background: theme.customBackground } : {}),
-    ...(theme.customTextColor ? { color: theme.customTextColor } : {})
+    ...(theme?.customBackground ? { background: theme.customBackground } : {}),
+    ...(theme?.customTextColor ? { color: theme.customTextColor } : {})
   };
 
   return (
     <div className={containerClasses} style={customStyle}>
        {/* Ensure the inner wrapper also respects height. Used min-h-[inherit] to allow parent containers (like preview box) to control flow if needed. */}
-       <div className={`w-full min-h-[inherit] ${theme.type === ThemeType.ForestGlass ? 'backdrop-blur-[8px] bg-black/30' : ''}`}>
+       <div className={`w-full min-h-[inherit] ${type === ThemeType.ForestGlass ? 'backdrop-blur-[8px] bg-black/30' : ''}`}>
           {children}
        </div>
     </div>
@@ -47,6 +50,9 @@ export const ThemeWrapper: React.FC<ThemeWrapperProps> = ({ theme, children }) =
 };
 
 export const getButtonClasses = (theme: ProfileTheme, featured: boolean = false): string => {
+  // Safety Check
+  if (!theme || !theme.type) return "w-full p-4 rounded-xl border bg-white border-gray-200 transition-all";
+
   const base = "w-full transition-all duration-200 ease-out cursor-pointer active:scale-[0.99] relative";
   
   if (featured) {
@@ -56,9 +62,6 @@ export const getButtonClasses = (theme: ProfileTheme, featured: boolean = false)
 
   // Standard buttons
   const standard = `${base} p-4 rounded-[1.25rem] flex items-center justify-between shadow-sm border`;
-
-  // Note: We generally don't override button bg/text with the global customTextColor to ensure contrast/readability
-  // Buttons keep their theme-specific look unless specifically overridden in a future update.
 
   switch (theme.type) {
     case ThemeType.ModernBlack:

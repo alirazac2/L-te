@@ -141,13 +141,14 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
 
         if (typeof rawData !== 'object' || rawData === null) return null;
 
-        // Sanitize projects to ensure tags is always an array
-        const sanitizedProjects = Array.isArray(rawData.projects) 
-            ? rawData.projects.map((p: any) => ({
-                ...p,
-                tags: Array.isArray(p.tags) ? p.tags : []
-              }))
-            : [];
+        // Strict sanitization to prevent UI crashes on null items
+        const safeArray = (arr: any) => Array.isArray(arr) ? arr.filter((i: any) => i && typeof i === 'object') : [];
+
+        // Sanitize projects deeply
+        const sanitizedProjects = safeArray(rawData.projects).map((p: any) => ({
+            ...p,
+            tags: Array.isArray(p.tags) ? p.tags.filter((t: any) => typeof t === 'string') : []
+        }));
 
         // Sanitize data to prevent crashes if on-chain data is old or malformed
         const safeData: UserProfile = {
@@ -156,11 +157,11 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
             bio: rawData.bio || '',
             avatarUrl: rawData.avatarUrl || '',
             verified: !!rawData.verified,
-            theme: rawData.theme || { type: ThemeType.ModernBlack },
-            socials: Array.isArray(rawData.socials) ? rawData.socials : [],
-            links: Array.isArray(rawData.links) ? rawData.links : [],
+            theme: (rawData.theme && typeof rawData.theme === 'object') ? rawData.theme : { type: ThemeType.ModernBlack },
+            socials: safeArray(rawData.socials),
+            links: safeArray(rawData.links),
             projects: sanitizedProjects,
-            projectCard: rawData.projectCard || { title: 'Featured Projects', description: 'See my work', icon: 'Layers' }
+            projectCard: (rawData.projectCard && typeof rawData.projectCard === 'object') ? rawData.projectCard : { title: 'Featured Projects', description: 'See my work', icon: 'Layers' }
         };
 
         return safeData;
