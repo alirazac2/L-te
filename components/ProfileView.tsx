@@ -4,7 +4,7 @@ import { fetchProfile } from '../services/dataService';
 import { UserProfile, LinkItem, ThemeType, ProjectItem } from '../types';
 import { ThemeWrapper, getButtonClasses } from './ThemeWrapper';
 import { getSocialIcon, getGenericIcon } from './Icons';
-import { BadgeCheck, Share2, AlertCircle, ChevronRight, ExternalLink, Layers } from 'lucide-react';
+import { BadgeCheck, Share2, AlertCircle, ChevronRight, ExternalLink, Layers, X, ArrowLeft } from 'lucide-react';
 
 interface ProfileViewProps {
     initialData?: UserProfile;
@@ -16,6 +16,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
   const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState(false);
+  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
 
   // Determine which profile data to use: prop (preview) or fetched (live)
   const profile = initialData || fetchedProfile;
@@ -92,8 +93,15 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
   const isLightTheme = profile.theme.type === ThemeType.CleanWhite;
   const projectCard = profile.projectCard || { title: 'Featured Projects', description: 'Explore my portfolio', icon: 'Layers' };
   
-  // Use current username from URL or profile data (fallback for editor)
-  const profileUsername = username || profile.username;
+  // Prevent body scroll when drawer is open
+  useEffect(() => {
+      if (isProjectsOpen) {
+          document.body.style.overflow = 'hidden';
+      } else {
+          document.body.style.overflow = '';
+      }
+      return () => { document.body.style.overflow = ''; };
+  }, [isProjectsOpen]);
 
   return (
     <ThemeWrapper theme={profile.theme}>
@@ -169,65 +177,90 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                 ))}
             </main>
 
-            {/* Customizable Projects Trigger Card -> LINKS TO SEPARATE PAGE */}
+            {/* Customizable Projects Trigger Card */}
             {profile.projects && profile.projects.length > 0 && (
-                <section className="w-full z-10 mt-8 mb-8 relative animate-fade-in delay-200">
-                    <div className={`flex items-center gap-4 mb-5 opacity-40 px-2 ${isLightTheme ? 'text-black' : 'text-white'}`}>
-                        <div className="h-px bg-current flex-1 rounded-full" />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Portfolio</span>
-                        <div className="h-px bg-current flex-1 rounded-full" />
-                    </div>
-
-                    <Link
-                        to={`/${profileUsername}/projects`}
-                        onClick={e => { if (disableNavigation) e.preventDefault(); }}
+                <section className="w-full z-10 mt-6 mb-8 px-1 relative animate-fade-in delay-200">
+                    <div 
+                        onClick={() => !disableNavigation && setIsProjectsOpen(true)}
                         className={`
-                            block w-full p-1 rounded-[1.5rem] transition-all duration-300 ease-out active:scale-[0.98] group relative
-                            ${isLightTheme 
-                                ? 'bg-gradient-to-br from-gray-100 to-white shadow-sm hover:shadow-md' 
-                                : 'bg-gradient-to-br from-white/10 to-white/5 shadow-2xl hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]'}
+                            cursor-pointer w-full group relative transition-all duration-300 ease-out active:scale-[0.98]
+                            ${!projectCard.thumbnail ? 'hover:-translate-y-1' : ''}
                         `}
                     >
-                        <div className={`
-                            relative w-full p-5 rounded-[1.3rem] flex items-center justify-between border
-                            ${isLightTheme 
-                                ? 'bg-white border-gray-100 group-hover:border-gray-200' 
-                                : 'bg-[#1a1a1a]/80 border-white/10 group-hover:border-white/20 backdrop-blur-xl'}
-                        `}>
-                            <div className="flex items-center gap-5 min-w-0">
-                                <div className={`
-                                    w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner overflow-hidden
-                                    ${isLightTheme 
-                                        ? 'bg-gradient-to-br from-indigo-50 to-white text-indigo-600' 
-                                        : 'bg-gradient-to-br from-white/10 to-transparent text-white'}
-                                `}>
-                                    {projectCard.thumbnail ? (
-                                        <img src={projectCard.thumbnail} alt="" className="w-full h-full object-cover" />
-                                    ) : projectCard.icon ? (
-                                        getGenericIcon(projectCard.icon, "w-7 h-7")
-                                    ) : (
-                                        <Layers className="w-7 h-7 opacity-20" />
-                                    )}
-                                </div>
-                                <div className="text-left min-w-0">
-                                    <h3 className={`font-bold text-lg leading-tight ${isLightTheme ? 'text-gray-900' : 'text-white'}`}>
-                                        {projectCard.title}
-                                    </h3>
+                        {projectCard.thumbnail ? (
+                            // Hero Style Trigger (with thumbnail)
+                            <div className="relative w-full aspect-[2.1/1] rounded-[1.5rem] overflow-hidden shadow-xl hover:shadow-2xl ring-1 ring-black/5">
+                                <img 
+                                    src={projectCard.thumbnail} 
+                                    alt={projectCard.title} 
+                                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" 
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                                
+                                <div className="absolute bottom-0 left-0 p-6 w-full text-left flex flex-col items-start gap-1">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider border border-white/10 mb-2">
+                                        <Layers className="w-3 h-3" /> Portfolio
+                                    </span>
+                                    <h3 className="text-xl md:text-2xl font-bold text-white leading-tight">{projectCard.title}</h3>
                                     {projectCard.description && (
-                                        <p className={`text-xs opacity-60 mt-1 truncate ${isLightTheme ? 'text-gray-500' : 'text-white/80'}`}>
+                                        <p className="text-white/80 text-xs md:text-sm font-medium line-clamp-1 max-w-[90%]">
                                             {projectCard.description}
                                         </p>
                                     )}
                                 </div>
+
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                                    <ChevronRight className="w-5 h-5" />
+                                </div>
                             </div>
+                        ) : (
+                            // Standard Style Trigger (no thumbnail)
                             <div className={`
-                                w-10 h-10 rounded-full flex items-center justify-center transition-transform duration-500 group-hover:translate-x-1
-                                ${isLightTheme ? 'bg-gray-50 text-gray-400' : 'bg-white/5 text-white/50'}
+                                relative w-full p-1 rounded-[1.5rem]
+                                ${isLightTheme 
+                                    ? 'bg-gradient-to-br from-gray-100 to-white shadow-sm hover:shadow-md' 
+                                    : 'bg-gradient-to-br from-white/10 to-white/5 shadow-2xl hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]'}
                             `}>
-                                <ChevronRight className="w-5 h-5" />
+                                <div className={`
+                                    relative w-full p-5 rounded-[1.3rem] flex items-center justify-between border
+                                    ${isLightTheme 
+                                        ? 'bg-white border-gray-100 group-hover:border-gray-200' 
+                                        : 'bg-[#1a1a1a]/80 border-white/10 group-hover:border-white/20 backdrop-blur-xl'}
+                                `}>
+                                    <div className="flex items-center gap-5 min-w-0">
+                                        <div className={`
+                                            w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner overflow-hidden
+                                            ${isLightTheme 
+                                                ? 'bg-gradient-to-br from-indigo-50 to-white text-indigo-600' 
+                                                : 'bg-gradient-to-br from-white/10 to-transparent text-white'}
+                                        `}>
+                                            {projectCard.icon ? (
+                                                getGenericIcon(projectCard.icon, "w-7 h-7")
+                                            ) : (
+                                                <Layers className="w-7 h-7 opacity-20" />
+                                            )}
+                                        </div>
+                                        <div className="text-left min-w-0">
+                                            <h3 className={`font-bold text-lg leading-tight ${isLightTheme ? 'text-gray-900' : 'text-white'}`}>
+                                                {projectCard.title}
+                                            </h3>
+                                            {projectCard.description && (
+                                                <p className={`text-xs opacity-60 mt-1 truncate ${isLightTheme ? 'text-gray-500' : 'text-white/80'}`}>
+                                                    {projectCard.description}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className={`
+                                        w-10 h-10 rounded-full flex items-center justify-center transition-transform duration-500 group-hover:translate-x-1
+                                        ${isLightTheme ? 'bg-gray-50 text-gray-400' : 'bg-white/5 text-white/50'}
+                                    `}>
+                                        <ChevronRight className="w-5 h-5" />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </Link>
+                        )}
+                    </div>
                 </section>
             )}
 
@@ -240,8 +273,148 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
 
         </div>
       </div>
+
+      {/* Projects Slide Screen / Drawer */}
+      <ProjectsDrawer 
+        isOpen={isProjectsOpen} 
+        onClose={() => setIsProjectsOpen(false)} 
+        profile={profile} 
+      />
+
     </ThemeWrapper>
   );
+};
+
+// --- Projects Drawer Component ---
+
+interface ProjectsDrawerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    profile: UserProfile;
+}
+
+const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, profile }) => {
+    const isLightTheme = profile.theme.type === ThemeType.CleanWhite;
+    const projects = profile.projects || [];
+    const projectCard = profile.projectCard || { title: 'Projects' };
+
+    return (
+        <div className={`fixed inset-0 z-[100] flex flex-col justify-end transition-all duration-500 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+            {/* Backdrop */}
+            <div 
+                className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
+                onClick={onClose}
+            />
+            
+            {/* Drawer Content */}
+            <div className={`
+                relative w-full h-[92vh] rounded-t-[2.5rem] overflow-hidden flex flex-col shadow-2xl transition-transform duration-500 ease-out transform
+                ${isOpen ? 'translate-y-0' : 'translate-y-full'}
+                ${isLightTheme ? 'bg-white text-gray-900' : 'bg-[#121212] text-white border-t border-white/10'}
+            `}>
+                {/* Visual Drag Handle */}
+                <div className="w-full flex justify-center pt-4 pb-2 flex-shrink-0 cursor-pointer" onClick={onClose}>
+                    <div className={`w-12 h-1.5 rounded-full ${isLightTheme ? 'bg-gray-300' : 'bg-white/20'}`} />
+                </div>
+
+                {/* Header */}
+                <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-transparent">
+                    <button 
+                        onClick={onClose}
+                        className={`p-2 rounded-full transition-colors ${isLightTheme ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-white/10 text-white/60'}`}
+                    >
+                        <ArrowLeft className="w-6 h-6" />
+                    </button>
+                    <h2 className="text-lg font-bold opacity-0 animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
+                        Portfolio
+                    </h2>
+                    <div className="w-10" /> {/* Spacer for balance */}
+                </div>
+
+                {/* Scrollable List */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 pb-20 no-scrollbar">
+                    <div className="max-w-[600px] mx-auto">
+                        <div className="mb-8">
+                            <h1 className="text-3xl md:text-4xl font-bold mb-2">{projectCard.title}</h1>
+                            {projectCard.description && (
+                                <p className={`opacity-60 ${isLightTheme ? 'text-gray-600' : 'text-white'}`}>
+                                    {projectCard.description}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="space-y-10">
+                            {projects.map((project, idx) => (
+                                <div 
+                                    key={project.id || idx} 
+                                    className="w-full group animate-slide-up"
+                                    style={{ animationDelay: `${0.1 + (idx * 0.1)}s`, animationFillMode: 'both' }}
+                                >
+                                    {/* Project Image */}
+                                    {project.thumbnail && (
+                                        <div className={`
+                                            rounded-2xl overflow-hidden aspect-video w-full shadow-lg mb-5 flex items-center justify-center relative 
+                                            ${isLightTheme ? 'bg-gray-100 border border-gray-200' : 'bg-white/5 border border-white/5'}
+                                        `}>
+                                            <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                        </div>
+                                    )}
+                                    
+                                    {/* Project Content */}
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="space-y-2">
+                                                {project.tags && (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {project.tags.map(tag => (
+                                                            <span key={tag} className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md ${isLightTheme ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-white/80'}`}>
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <h3 className="text-2xl font-bold leading-tight">{project.title}</h3>
+                                            </div>
+                                            {project.url && (
+                                                <a 
+                                                    href={project.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={`
+                                                        p-3 rounded-full shrink-0 transition-transform hover:scale-110 active:scale-95
+                                                        ${isLightTheme ? 'bg-black text-white' : 'bg-white text-black'}
+                                                    `}
+                                                >
+                                                    <ExternalLink className="w-5 h-5" />
+                                                </a>
+                                            )}
+                                        </div>
+                                        
+                                        {project.description && (
+                                            <p className={`text-base leading-relaxed ${isLightTheme ? 'text-gray-600' : 'text-gray-300'}`}>
+                                                {project.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Divider */}
+                                    {idx < projects.length - 1 && (
+                                        <div className={`h-px w-full mt-10 opacity-10 ${isLightTheme ? 'bg-black' : 'bg-white'}`} />
+                                    )}
+                                </div>
+                            ))}
+                            
+                            {projects.length === 0 && (
+                                <div className={`text-center py-12 border-2 border-dashed rounded-xl opacity-50 ${isLightTheme ? 'border-gray-300' : 'border-white/20'}`}>
+                                    No projects to display yet.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // --- Helper Components ---
