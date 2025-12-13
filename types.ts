@@ -37,6 +37,7 @@ export interface ProjectItem {
   title: string;
   description: string;
   thumbnail?: string;
+  icon?: string; // Lucide icon name
   url?: string;
   tags?: string[];
 }

@@ -39,11 +39,19 @@ const JsonGenerator: React.FC = () => {
       projects: [
         {
             id: "p1",
-            title: "My Awesome Project",
-            description: "A short description of what this project is about.",
+            title: "Project One",
+            description: "Visual project",
             thumbnail: "https://picsum.photos/600/400",
-            url: "https://github.com/yourhandle/project",
-            tags: ["Development", "React"]
+            url: "https://github.com/yourhandle/project-1",
+            tags: ["React", "UI"]
+        },
+        {
+            id: "p2",
+            title: "Project Two",
+            description: "Icon based",
+            icon: "Rocket",
+            url: "https://github.com/yourhandle/project-2",
+            tags: ["Backend", "Node"]
         }
       ]
     };

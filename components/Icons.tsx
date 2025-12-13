@@ -7,7 +7,8 @@ import {
   Monitor, Headphones, Image, Twitch, Slack, Dribbble, Codepen,
   MessageCircle, Send, Zap, DollarSign, Gift, Award, Bookmark, Cloud, 
   Hash, Search, Play, Gamepad2, Mic, Palette, PenTool, Truck, Anchor, 
-  Key, Lock, Shield, Bitcoin, Chrome, Terminal, Cpu, Database, Wifi
+  Key, Lock, Shield, Bitcoin, Chrome, Terminal, Cpu, Database, Wifi,
+  Folder, FolderOpen, Rocket, Package, Layers, GitBranch, Box
 } from 'lucide-react';
 import { SocialPlatform } from '../types';
 
@@ -42,6 +43,7 @@ const ICON_MAP: Record<string, React.FC<any>> = {
   
   // Tech & Tools
   Settings, Code, Terminal, Cpu, Database, Wifi, Cloud, Hash, Palette, PenTool, Gamepad2,
+  Folder, FolderOpen, Rocket, Package, Layers, GitBranch, Box,
   
   // Misc
   Coffee, Smile, MessageCircle, Send, Zap, Bookmark, Anchor, Key, Lock, Shield, CheckCircle2, AlertCircle

@@ -443,9 +443,15 @@ const ProjectsListModal: React.FC<{ projects: ProjectItem[]; onClose: () => void
                         <div key={project.id || idx} className="w-full group">
                             {/* Project Header */}
                             <div className="mb-4">
-                                {project.thumbnail && (
-                                    <div className="rounded-xl overflow-hidden aspect-video w-full shadow-lg mb-4 ring-1 ring-black/5 dark:ring-white/10">
-                                        <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                {(project.thumbnail || project.icon) && (
+                                    <div className={`rounded-xl overflow-hidden aspect-video w-full shadow-lg mb-4 flex items-center justify-center relative ${isLightTheme ? 'bg-gray-50 border border-gray-100' : 'bg-white/5 border border-white/5'}`}>
+                                        {project.thumbnail ? (
+                                            <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                        ) : project.icon ? (
+                                            <div className="transform transition-transform duration-500 group-hover:scale-110">
+                                                {getGenericIcon(project.icon, `w-20 h-20 opacity-80 ${isLightTheme ? 'text-indigo-500' : 'text-white'}`)}
+                                            </div>
+                                        ) : null}
                                     </div>
                                 )}
                                 
@@ -464,9 +470,11 @@ const ProjectsListModal: React.FC<{ projects: ProjectItem[]; onClose: () => void
                             </div>
                             
                             {/* Description */}
-                            <p className={`text-sm leading-relaxed mb-4 break-words ${isLightTheme ? 'text-gray-600' : 'text-gray-300'}`}>
-                                {project.description}
-                            </p>
+                            {project.description && (
+                                <p className={`text-sm leading-relaxed mb-4 break-words ${isLightTheme ? 'text-gray-600' : 'text-gray-300'}`}>
+                                    {project.description}
+                                </p>
+                            )}
 
                             {/* Action Button */}
                             {project.url && (
