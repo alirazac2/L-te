@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { fetchProfile } from '../services/dataService';
-import { UserProfile, LinkItem, ThemeType, ProjectItem } from '../types';
+import { UserProfile, LinkItem, ThemeType } from '../types';
 import { ThemeWrapper, getButtonClasses } from './ThemeWrapper';
 import { getSocialIcon, getGenericIcon } from './Icons';
-import { BadgeCheck, Share2, AlertCircle, ChevronRight, ExternalLink, Layers, X, ArrowLeft } from 'lucide-react';
+import { BadgeCheck, Share2, AlertCircle, ChevronRight, ExternalLink, Layers, ArrowLeft } from 'lucide-react';
 
 interface ProfileViewProps {
     initialData?: UserProfile;
@@ -19,7 +19,17 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
 
   // Determine which profile data to use: prop (preview) or fetched (live)
-  const profile = initialData || fetchedProfile;
+  const rawProfile = initialData || fetchedProfile;
+
+  // Ensure robust default values to prevent crashes if on-chain data is partial/broken
+  const profile: UserProfile | null = rawProfile ? {
+      ...rawProfile,
+      theme: rawProfile.theme || { type: ThemeType.ModernBlack },
+      socials: rawProfile.socials || [],
+      links: rawProfile.links || [],
+      projects: rawProfile.projects || [],
+      projectCard: rawProfile.projectCard || { title: 'Featured Projects', description: 'Explore my portfolio', icon: 'Layers' }
+  } : null;
 
   useEffect(() => {
     // Only fetch if we don't have initialData (preview mode) and we have a username
@@ -44,18 +54,15 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
   }, [username, initialData]);
 
   const handleShare = async () => {
+    if (!profile) return;
     const url = window.location.href;
-    const title = profile?.displayName || 'Bio Link';
+    const title = profile.displayName || 'Bio Link';
 
     if (navigator.share) {
       try {
-        await navigator.share({
-          title,
-          url,
-        });
+        await navigator.share({ title, url });
         return;
       } catch (err) {
-        console.warn("Share failed:", err);
         if (err instanceof Error && err.name === 'AbortError') return;
       }
     }
@@ -64,14 +71,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
       await navigator.clipboard.writeText(url);
       alert('Link copied to clipboard!');
     } catch (err) {
-      console.error("Clipboard copy failed", err);
       alert('Could not share profile.');
     }
   };
 
-  if (loading && !profile) {
-    return <ProfileSkeleton />;
-  }
+  if (loading && !profile) return <ProfileSkeleton />;
 
   if (error || !profile) {
     return (
@@ -80,12 +84,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
             <AlertCircle className="w-8 h-8 text-red-500" />
         </div>
         <h1 className="text-xl font-semibold text-gray-900">Profile Not Found</h1>
-        <p className="text-gray-500 mt-2 max-w-sm">
-          We couldn't find a configuration for <strong>{username}</strong>.
-        </p>
-        <a href="/" className="mt-8 px-6 py-2.5 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-all">
-          Back to Home
-        </a>
+        <a href="/" className="mt-8 px-6 py-2.5 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-all">Back to Home</a>
       </div>
     );
   }
@@ -102,6 +101,31 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
       }
       return () => { document.body.style.overflow = ''; };
   }, [isProjectsOpen]);
+
+  // Helper to get project card theme styles
+  const getProjectCardStyles = (type: ThemeType) => {
+    switch (type) {
+        case ThemeType.CleanWhite:
+            return 'bg-white border-gray-200 text-gray-900 shadow-sm hover:border-gray-300 hover:shadow-md';
+        case ThemeType.ModernBlack:
+            return 'bg-[#1a1a1a] border-[#333] text-white hover:bg-[#222] hover:border-[#444]';
+        case ThemeType.ForestGlass:
+            return 'bg-black/40 border-white/10 text-white backdrop-blur-md hover:bg-black/50 hover:border-white/20';
+        case ThemeType.GradientBlue:
+            return 'bg-blue-950/30 border-white/10 text-white backdrop-blur-md hover:bg-blue-900/40 hover:border-white/20';
+        case ThemeType.SunsetVibe:
+            return 'bg-rose-950/30 border-white/10 text-white backdrop-blur-md hover:bg-rose-900/40 hover:border-white/20';
+        default:
+             return 'bg-white/10 border-white/10 text-white backdrop-blur-md hover:bg-white/20';
+    }
+  };
+
+  // Helper for Project Card Icon Container
+  const getIconContainerStyles = (type: ThemeType) => {
+      if (type === ThemeType.CleanWhite) return 'bg-indigo-50 text-indigo-600';
+      if (type === ThemeType.ModernBlack) return 'bg-[#252525] text-white';
+      return 'bg-white/10 text-white';
+  };
 
   return (
     <ThemeWrapper theme={profile.theme}>
@@ -155,7 +179,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                                     ? 'bg-white border border-gray-200 text-gray-600 shadow-sm hover:shadow-md hover:text-black hover:border-gray-300' 
                                     : 'bg-white/10 border border-white/5 text-white/90 shadow-lg backdrop-blur-sm hover:bg-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:text-white hover:border-white/20'}
                             `}
-                            aria-label={social.platform}
                             onClick={e => { if(disableNavigation) e.preventDefault(); }}
                         >
                             {getSocialIcon(social.platform, "w-5 h-5 transition-transform duration-300")}
@@ -164,8 +187,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                 </div>
             </header>
 
-            {/* Links Stack */}
-            <main className="w-full space-y-3 z-10 pb-6">
+            {/* Links Section */}
+            <main className="w-full space-y-3 z-10">
                 {profile.links.map((link, idx) => (
                     <LinkCard 
                         key={link.id} 
@@ -177,18 +200,26 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                 ))}
             </main>
 
-            {/* Customizable Projects Trigger Card */}
+            {/* Projects Section - Clearly Separated */}
             {profile.projects && profile.projects.length > 0 && (
-                <section className="w-full z-10 mt-6 mb-8 px-1 relative animate-fade-in delay-200">
+                <section className="w-full z-10 mt-10 px-1 relative animate-slide-up delay-100">
+                    
+                    {/* Visual Separator if needed, or just space */}
+                    <div className="flex items-center gap-4 mb-4 opacity-50 px-2">
+                        <div className={`h-px flex-1 ${isLightTheme ? 'bg-gray-300' : 'bg-white/20'}`}></div>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isLightTheme ? 'text-gray-400' : 'text-white/40'}`}>Portfolio</span>
+                        <div className={`h-px flex-1 ${isLightTheme ? 'bg-gray-300' : 'bg-white/20'}`}></div>
+                    </div>
+
                     <div 
-                        onClick={() => !disableNavigation && setIsProjectsOpen(true)}
+                        onClick={() => setIsProjectsOpen(true)}
                         className={`
                             cursor-pointer w-full group relative transition-all duration-300 ease-out active:scale-[0.98]
                             ${!projectCard.thumbnail ? 'hover:-translate-y-1' : ''}
                         `}
                     >
                         {projectCard.thumbnail ? (
-                            // Hero Style Trigger (with thumbnail)
+                            // Hero Style Trigger (Image Background)
                             <div className="relative w-full aspect-[2.1/1] rounded-[1.5rem] overflow-hidden shadow-xl hover:shadow-2xl ring-1 ring-black/5">
                                 <img 
                                     src={projectCard.thumbnail} 
@@ -199,7 +230,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                                 
                                 <div className="absolute bottom-0 left-0 p-6 w-full text-left flex flex-col items-start gap-1">
                                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider border border-white/10 mb-2">
-                                        <Layers className="w-3 h-3" /> Portfolio
+                                        <Layers className="w-3 h-3" /> Projects
                                     </span>
                                     <h3 className="text-xl md:text-2xl font-bold text-white leading-tight">{projectCard.title}</h3>
                                     {projectCard.description && (
@@ -214,38 +245,31 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                                 </div>
                             </div>
                         ) : (
-                            // Standard Style Trigger (no thumbnail)
+                            // Standard Style Trigger (Themed Card)
                             <div className={`
-                                relative w-full p-1 rounded-[1.5rem]
-                                ${isLightTheme 
-                                    ? 'bg-gradient-to-br from-gray-100 to-white shadow-sm hover:shadow-md' 
-                                    : 'bg-gradient-to-br from-white/10 to-white/5 shadow-2xl hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]'}
+                                relative w-full p-1 rounded-[1.5rem] bg-gradient-to-br from-white/5 to-white/0
                             `}>
                                 <div className={`
-                                    relative w-full p-5 rounded-[1.3rem] flex items-center justify-between border
-                                    ${isLightTheme 
-                                        ? 'bg-white border-gray-100 group-hover:border-gray-200' 
-                                        : 'bg-[#1a1a1a]/80 border-white/10 group-hover:border-white/20 backdrop-blur-xl'}
+                                    relative w-full p-5 rounded-[1.3rem] flex items-center justify-between border transition-all duration-300
+                                    ${getProjectCardStyles(profile.theme.type)}
                                 `}>
                                     <div className="flex items-center gap-5 min-w-0">
                                         <div className={`
                                             w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner overflow-hidden
-                                            ${isLightTheme 
-                                                ? 'bg-gradient-to-br from-indigo-50 to-white text-indigo-600' 
-                                                : 'bg-gradient-to-br from-white/10 to-transparent text-white'}
+                                            ${getIconContainerStyles(profile.theme.type)}
                                         `}>
                                             {projectCard.icon ? (
                                                 getGenericIcon(projectCard.icon, "w-7 h-7")
                                             ) : (
-                                                <Layers className="w-7 h-7 opacity-20" />
+                                                <Layers className="w-7 h-7 opacity-50" />
                                             )}
                                         </div>
                                         <div className="text-left min-w-0">
-                                            <h3 className={`font-bold text-lg leading-tight ${isLightTheme ? 'text-gray-900' : 'text-white'}`}>
+                                            <h3 className="font-bold text-lg leading-tight">
                                                 {projectCard.title}
                                             </h3>
                                             {projectCard.description && (
-                                                <p className={`text-xs opacity-60 mt-1 truncate ${isLightTheme ? 'text-gray-500' : 'text-white/80'}`}>
+                                                <p className="text-xs opacity-60 mt-1 truncate">
                                                     {projectCard.description}
                                                 </p>
                                             )}
@@ -253,7 +277,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                                     </div>
                                     <div className={`
                                         w-10 h-10 rounded-full flex items-center justify-center transition-transform duration-500 group-hover:translate-x-1
-                                        ${isLightTheme ? 'bg-gray-50 text-gray-400' : 'bg-white/5 text-white/50'}
+                                        ${isLightTheme ? 'bg-gray-100 text-gray-400' : 'bg-white/10 text-white/70'}
                                     `}>
                                         <ChevronRight className="w-5 h-5" />
                                     </div>
@@ -265,7 +289,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
             )}
 
             {/* Branding Footer */}
-            <footer className="mt-auto py-4 text-center">
+            <footer className="mt-auto py-8 text-center">
                 <a href="/" className="inline-block px-3 py-1 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold tracking-widest uppercase opacity-50 hover:opacity-100 transition-all">
                     BioLinker © {new Date().getFullYear()}
                 </a>
@@ -275,6 +299,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
       </div>
 
       {/* Projects Slide Screen / Drawer */}
+      {/* 
+         The drawer is "fixed" but thanks to the parent container's transform (in PhoneMockup), 
+         it will be contained within the phone screen in preview mode.
+      */}
       <ProjectsDrawer 
         isOpen={isProjectsOpen} 
         onClose={() => setIsProjectsOpen(false)} 
@@ -294,9 +322,22 @@ interface ProjectsDrawerProps {
 }
 
 const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, profile }) => {
-    const isLightTheme = profile.theme.type === ThemeType.CleanWhite;
-    const projects = profile.projects || [];
-    const projectCard = profile.projectCard || { title: 'Projects' };
+    const isLightTheme = profile?.theme?.type === ThemeType.CleanWhite;
+    const projects = profile?.projects || [];
+    const projectCard = profile?.projectCard || { title: 'Projects' };
+    const themeType = profile?.theme?.type || ThemeType.ModernBlack;
+
+    // Theme-specific Drawer Backgrounds
+    const getDrawerBg = (type: ThemeType) => {
+        switch (type) {
+           case ThemeType.CleanWhite: return 'bg-white text-gray-900';
+           case ThemeType.ModernBlack: return 'bg-[#121212] text-white';
+           case ThemeType.GradientBlue: return 'bg-[#0f172a] text-white'; // Slate-900
+           case ThemeType.SunsetVibe: return 'bg-[#2d1b1e] text-white'; // Dark Reddish
+           case ThemeType.ForestGlass: return 'bg-[#0a2f1f] text-white'; // Dark Greenish
+           default: return 'bg-[#121212] text-white';
+       }
+    };
 
     return (
         <div className={`fixed inset-0 z-[100] flex flex-col justify-end transition-all duration-500 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
@@ -308,9 +349,9 @@ const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, profil
             
             {/* Drawer Content */}
             <div className={`
-                relative w-full h-[92vh] rounded-t-[2.5rem] overflow-hidden flex flex-col shadow-2xl transition-transform duration-500 ease-out transform
+                relative w-full h-[95%] rounded-t-[2.5rem] overflow-hidden flex flex-col shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] transform
                 ${isOpen ? 'translate-y-0' : 'translate-y-full'}
-                ${isLightTheme ? 'bg-white text-gray-900' : 'bg-[#121212] text-white border-t border-white/10'}
+                ${getDrawerBg(themeType)}
             `}>
                 {/* Visual Drag Handle */}
                 <div className="w-full flex justify-center pt-4 pb-2 flex-shrink-0 cursor-pointer" onClick={onClose}>
@@ -328,22 +369,22 @@ const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, profil
                     <h2 className="text-lg font-bold opacity-0 animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
                         Portfolio
                     </h2>
-                    <div className="w-10" /> {/* Spacer for balance */}
+                    <div className="w-10" /> {/* Spacer */}
                 </div>
 
                 {/* Scrollable List */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 pb-20 no-scrollbar">
                     <div className="max-w-[600px] mx-auto">
                         <div className="mb-8">
-                            <h1 className="text-3xl md:text-4xl font-bold mb-2">{projectCard.title}</h1>
+                            <h1 className="text-3xl md:text-4xl font-bold mb-2 leading-tight">{projectCard.title}</h1>
                             {projectCard.description && (
-                                <p className={`opacity-60 ${isLightTheme ? 'text-gray-600' : 'text-white'}`}>
+                                <p className={`opacity-60 text-lg ${isLightTheme ? 'text-gray-600' : 'text-white'}`}>
                                     {projectCard.description}
                                 </p>
                             )}
                         </div>
 
-                        <div className="space-y-10">
+                        <div className="space-y-12">
                             {projects.map((project, idx) => (
                                 <div 
                                     key={project.id || idx} 
@@ -431,6 +472,7 @@ const AvatarWithSkeleton: React.FC<{ src: string; alt: string; fallbackChar: str
                         alt={alt} 
                         className={`w-full h-full object-cover transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
                         onLoad={() => setIsLoading(false)}
+                        onError={() => setIsLoading(false)}
                     />
                     {isLoading && (
                         <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
@@ -455,19 +497,12 @@ const ProfileSkeleton: React.FC = () => {
             
             {/* Header Section */}
             <div className="flex flex-col items-center mb-10 w-full relative">
-                {/* Avatar */}
                 <div className="w-28 h-28 rounded-full bg-gray-200 mb-6 shadow-sm ring-4 ring-gray-50" />
-                
-                {/* Name */}
                 <div className="h-7 w-40 bg-gray-200 rounded-full mb-4" />
-                
-                {/* Bio lines */}
                 <div className="space-y-2 w-full max-w-[250px] flex flex-col items-center mb-8">
                     <div className="h-2.5 w-full bg-gray-100 rounded-full" />
                     <div className="h-2.5 w-3/4 bg-gray-100 rounded-full" />
                 </div>
-                
-                {/* Social Icons */}
                 <div className="flex gap-3">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className="w-11 h-11 rounded-full bg-gray-100" />
@@ -477,7 +512,6 @@ const ProfileSkeleton: React.FC = () => {
 
             {/* Links Section */}
             <div className="w-full space-y-4">
-                {/* Featured Card Skeleton (Larger) */}
                 <div className="w-full aspect-[2/1] rounded-2xl bg-gray-200 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                     <div className="absolute bottom-5 left-5 right-5 space-y-3">
@@ -485,8 +519,6 @@ const ProfileSkeleton: React.FC = () => {
                          <div className="h-3 w-3/4 bg-gray-300/50 rounded-lg" />
                     </div>
                 </div>
-
-                {/* Standard Link Skeletons */}
                 {[1, 2, 3].map(i => (
                     <div key={i} className="w-full h-[76px] rounded-[1.25rem] bg-gray-50 border border-gray-100 flex items-center px-4 justify-between">
                          <div className="flex items-center gap-4 w-full">

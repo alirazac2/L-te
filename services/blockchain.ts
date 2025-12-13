@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { CONTRACTS, kiteAI } from './web3Config';
 import { ProfileContractABI, ProfileHubABI } from './abis';
-import { UserProfile } from '../types';
+import { UserProfile, ThemeType } from '../types';
 
 declare global {
   interface Window {
@@ -129,7 +129,24 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
         const jsonString = await profileContract.getUserData();
         
         if (!jsonString) return null;
-        return JSON.parse(jsonString) as UserProfile;
+        
+        const rawData = JSON.parse(jsonString);
+
+        // Sanitize data to prevent crashes if on-chain data is old or malformed
+        const safeData: UserProfile = {
+            username: rawData.username || username,
+            displayName: rawData.displayName || username,
+            bio: rawData.bio || '',
+            avatarUrl: rawData.avatarUrl || '',
+            verified: !!rawData.verified,
+            theme: rawData.theme || { type: ThemeType.ModernBlack },
+            socials: Array.isArray(rawData.socials) ? rawData.socials : [],
+            links: Array.isArray(rawData.links) ? rawData.links : [],
+            projects: Array.isArray(rawData.projects) ? rawData.projects : [],
+            projectCard: rawData.projectCard || { title: 'Featured Projects', description: 'See my work', icon: 'Layers' }
+        };
+
+        return safeData;
     } catch (e) {
         console.error(`Failed to fetch on-chain data for ${username}`, e);
         return null;
