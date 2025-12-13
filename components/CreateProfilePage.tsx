@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ProfileView from './ProfileView';
 import { UserProfile, ThemeType, SocialPlatform, ProfileTheme } from '../types';
-import { UploadCloud, Save, ArrowLeft, Loader2, Wallet, Smartphone, Edit2, Layout, Image, Link as LinkIcon, Share2, Layers } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Wallet, Edit2, Layout, Image, Link as LinkIcon, Share2, Layers, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { connectWallet, publishProfile, getProfileAddress, getUsernameByWallet, fetchProfileDataOnChain, checkWalletConnection } from '../services/blockchain';
 import { Toast, ToastType } from './Toast';
@@ -10,7 +10,7 @@ import { Toast, ToastType } from './Toast';
 // Imported Sub-Components
 import IdentitySection from './editor/IdentitySection';
 import ThemeSection from './editor/ThemeSection';
-import SectionsEditor from './editor/SectionsEditor'; // Updated
+import SectionsEditor from './editor/SectionsEditor'; 
 import LinksEditor from './editor/LinksEditor';
 import SocialsEditor from './editor/SocialsEditor';
 import EditModals from './editor/EditModals';
@@ -30,15 +30,7 @@ const DEFAULT_PROFILE: UserProfile = {
   links: [
     { id: '1', title: 'My First Link', url: 'https://example.com', icon: 'Link' }
   ],
-  sections: [
-      {
-          id: 's1',
-          title: 'Featured Projects',
-          description: 'See my work',
-          icon: 'Layers',
-          items: []
-      }
-  ]
+  sections: []
 };
 
 // --- Types ---
@@ -455,81 +447,87 @@ const CreateProfilePage: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-white text-gray-900 overflow-hidden font-sans relative">
+    // ROOT: Allow body scroll by using min-h-screen and NO overflow-hidden on root
+    <div className="min-h-screen bg-white text-gray-900 font-sans flex flex-col md:flex-row relative">
         <Toast message={toast.msg} type={toast.type} isVisible={toast.visible} onClose={() => setToast({ ...toast, visible: false })} />
 
-        {/* Editor Sidebar */}
+        {/* --- Editor Column (Left) --- */}
+        {/* On mobile, hidden when in preview mode (viewMode === 'preview'). On Desktop, always visible */}
         <div className={`
-            w-full md:w-1/2 lg:w-5/12 h-full flex flex-col bg-white border-r border-gray-200 shadow-2xl z-20 transition-transform duration-300 ease-in-out
-            ${viewMode === 'preview' ? '-translate-x-full absolute md:static md:translate-x-0' : 'translate-x-0'}
+            w-full md:w-1/2 lg:w-5/12 bg-white border-r border-gray-200 z-20 relative
+            ${viewMode === 'preview' ? 'hidden md:block' : 'block'}
         `}>
-            {/* Header */}
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white z-10 shrink-0">
-                <div className="flex items-center gap-3">
-                    <Link to="/" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
-                        <ArrowLeft className="w-5 h-5" />
-                    </Link>
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-800">
-                             {hasRegisteredProfile ? 'Edit Profile' : 'Create Profile'}
-                        </h1>
-                        <div className="text-xs font-medium flex items-center gap-1">
-                             {walletAddress ? (
-                                 <span className="text-green-600 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> {walletAddress.slice(0,6)}...</span>
-                             ) : (
-                                 <span className="text-orange-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-400"></div> Guest Mode</span>
-                             )}
+            {/* Sticky Header Wrapper: Keeps Header, Status, and Tabs pinned at top while body scrolls */}
+            <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-100">
+                
+                {/* 1. Header */}
+                <div className="p-4 flex items-center justify-between bg-white/95 backdrop-blur-sm">
+                    <div className="flex items-center gap-3">
+                        <Link to="/" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-800 leading-tight">
+                                {hasRegisteredProfile ? 'Edit Profile' : 'Create Profile'}
+                            </h1>
+                            <div className="text-xs font-medium flex items-center gap-1">
+                                {walletAddress ? (
+                                    <span className="text-green-600 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> {walletAddress.slice(0,6)}...</span>
+                                ) : (
+                                    <span className="text-orange-500 flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-400"></div> Guest Mode</span>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={handlePublish}
-                        disabled={isPublishing || Object.keys(identityErrors).length > 0}
-                        title="Save to Blockchain"
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors shadow-sm disabled:opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                        {isPublishing ? <Loader2 className="w-4 h-4 animate-spin"/> : (walletAddress ? <Save className="w-4 h-4" /> : <Wallet className="w-4 h-4"/>)}
-                        <span className="hidden sm:inline">
-                            {isPublishing ? 'Working...' : (walletAddress ? (hasRegisteredProfile ? 'Save Changes' : 'Mint Profile') : 'Connect & Mint')}
-                        </span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Status Bar for Publishing */}
-            {isPublishing && (
-                <div className="bg-indigo-50 px-6 py-2 text-xs font-medium text-indigo-700 border-b border-indigo-100 flex items-center gap-2 animate-fade-in">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    {publishStatus}
-                </div>
-            )}
-
-            {/* Tabs Navigation */}
-            <div className="flex items-center px-2 py-2 border-b border-gray-100 overflow-x-auto no-scrollbar gap-1 bg-gray-50/50">
-                {TABS.map(tab => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`
-                                flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap
-                                ${isActive 
-                                    ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-gray-200' 
-                                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}
-                            `}
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={handlePublish}
+                            disabled={isPublishing || Object.keys(identityErrors).length > 0}
+                            title="Save to Blockchain"
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors shadow-sm disabled:opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
-                            <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'opacity-70'}`} />
-                            {tab.label}
+                            {isPublishing ? <Loader2 className="w-4 h-4 animate-spin"/> : (walletAddress ? <Save className="w-4 h-4" /> : <Wallet className="w-4 h-4"/>)}
+                            <span className="hidden sm:inline">
+                                {isPublishing ? 'Working...' : (walletAddress ? (hasRegisteredProfile ? 'Save Changes' : 'Mint Profile') : 'Connect & Mint')}
+                            </span>
                         </button>
-                    )
-                })}
+                    </div>
+                </div>
+
+                {/* 2. Status Bar */}
+                {isPublishing && (
+                    <div className="bg-indigo-50 px-6 py-2 text-xs font-medium text-indigo-700 border-t border-indigo-100 flex items-center gap-2 animate-fade-in">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        {publishStatus}
+                    </div>
+                )}
+
+                {/* 3. Tabs */}
+                <div className="flex items-center px-2 py-2 overflow-x-auto no-scrollbar gap-1 bg-gray-50/90 backdrop-blur-sm border-t border-gray-100">
+                    {TABS.map(tab => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`
+                                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap
+                                    ${isActive 
+                                        ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-gray-200' 
+                                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}
+                                `}
+                            >
+                                <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'opacity-70'}`} />
+                                {tab.label}
+                            </button>
+                        )
+                    })}
+                </div>
             </div>
 
-            {/* Scrollable Form Area */}
-            <div className="flex-1 overflow-y-auto p-6 no-scrollbar bg-gray-50/30">
+            {/* 4. Scrollable Content (Flows naturally in document body) */}
+            <div className="p-6 pb-32 md:pb-10 min-h-[500px]">
                 
                 {activeTab === 'identity' && (
                     <div className="animate-fade-in">
@@ -601,29 +599,40 @@ const CreateProfilePage: React.FC = () => {
             </div>
         </div>
 
-        {/* Mobile View Toggle */}
-        <div className="md:hidden fixed bottom-6 right-6 z-50">
-            <button 
-                onClick={() => setViewMode(viewMode === 'edit' ? 'preview' : 'edit')}
-                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-full shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] font-bold hover:bg-indigo-700 transition-all active:scale-95 border border-indigo-500"
-            >
-                {viewMode === 'edit' ? <><Smartphone className="w-5 h-5"/> Preview</> : <><Edit2 className="w-5 h-5"/> Edit</>}
-            </button>
+        {/* --- Preview Column (Right) --- */}
+        <div className={`
+             md:block md:w-1/2 lg:w-7/12 md:bg-gray-100
+             md:sticky md:top-0 md:h-screen md:overflow-hidden
+             ${viewMode === 'preview' ? 'fixed inset-0 z-50 bg-white flex flex-col' : 'hidden'} 
+        `}>
+            {/* Desktop Background Pattern */}
+            <div className="hidden md:block absolute inset-0 opacity-10 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                 
+            {/* Phone Container */}
+            <div className="w-full h-full md:w-auto md:h-auto md:max-h-[90vh] flex items-center justify-center transform-gpu relative z-10 md:p-8">
+                <PhoneMockup viewMode={viewMode}>
+                    <ProfileView initialData={profile} disableNavigation={true} />
+                </PhoneMockup>
+            </div>
         </div>
 
-        {/* Preview Area */}
-        <div className={`
-            w-full md:w-1/2 lg:w-7/12 h-full flex flex-col items-center justify-center relative transition-all duration-300
-            ${viewMode === 'edit' ? 'hidden md:flex bg-gray-50/50' : 'flex absolute inset-0 z-30 bg-white md:static md:bg-gray-50/50'}
-        `}>
-             <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] hidden md:block opacity-70"></div>
-            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-6 hidden md:block animate-fade-in">
-                Live Preview
-            </div>
-
-            <PhoneMockup viewMode={viewMode}>
-                <ProfileView initialData={profile} disableNavigation={true} />
-            </PhoneMockup>
+        {/* --- Mobile View Toggle Button (Floating) --- */}
+        {/* Always visible on mobile, positioned on top of everything */}
+        <div className="md:hidden fixed bottom-6 right-6 z-[60]">
+            <button 
+                onClick={() => setViewMode(prev => prev === 'edit' ? 'preview' : 'edit')}
+                className="flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white rounded-full shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] font-bold hover:bg-indigo-700 transition-all active:scale-95 border border-indigo-500"
+            >
+                {viewMode === 'edit' ? (
+                    <>
+                       <Eye className="w-5 h-5" /> Preview
+                    </>
+                ) : (
+                    <>
+                       <Edit2 className="w-5 h-5" /> Edit
+                    </>
+                )}
+            </button>
         </div>
 
         <EditModals 

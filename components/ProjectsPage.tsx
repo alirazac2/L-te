@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { fetchProfile } from '../services/dataService';
-import { UserProfile, ThemeType } from '../types';
+import { UserProfile, ThemeType, SectionConfig, SectionItem } from '../types';
 import { ThemeWrapper } from './ThemeWrapper';
 import { ExternalLink, ArrowLeft, AlertCircle } from 'lucide-react';
 
@@ -35,8 +35,14 @@ const ProjectsPage: React.FC = () => {
   }
 
   const isLightTheme = profile.theme.type === ThemeType.CleanWhite;
-  const projects = profile.projects || [];
-  const projectCard = profile.projectCard || { title: 'Projects' };
+  
+  // Use first section as fallback for legacy Projects page
+  const mainSection: SectionConfig = profile.sections && profile.sections.length > 0 
+      ? profile.sections[0] 
+      : { id: 'default', title: 'Projects', description: '', items: [] };
+      
+  const projects: SectionItem[] = mainSection.items || [];
+  const projectCard = mainSection;
 
   return (
     <ThemeWrapper theme={profile.theme}>
@@ -71,9 +77,9 @@ const ProjectsPage: React.FC = () => {
                     <h1 className={`text-3xl md:text-4xl font-bold ${isLightTheme ? 'text-gray-900' : 'text-white'}`}>
                         {projectCard.title || 'Portfolio'}
                     </h1>
-                    {profile.projectCard?.description && (
+                    {projectCard.description && (
                         <p className={`mt-2 ${isLightTheme ? 'text-gray-500' : 'text-white/60'}`}>
-                            {profile.projectCard.description}
+                            {projectCard.description}
                         </p>
                     )}
                 </div>

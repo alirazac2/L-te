@@ -1,11 +1,11 @@
 import React from 'react';
-import { ProjectItem, ProjectCardConfig } from '../../types';
+import { SectionItem, SectionConfig } from '../../types';
 import { Plus, ChevronUp, ChevronDown, Edit2, Trash2, Layers, Settings, Folder } from 'lucide-react';
 import { getGenericIcon } from '../Icons';
 
 interface ProjectsEditorProps {
-  projects: ProjectItem[];
-  projectCard: ProjectCardConfig;
+  projects: SectionItem[];
+  projectCard: SectionConfig;
   onAdd: () => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;

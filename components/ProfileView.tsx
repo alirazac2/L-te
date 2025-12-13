@@ -18,8 +18,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState(false);
   
-  // Track open section index
-  const [openSectionIndex, setOpenSectionIndex] = useState<number | null>(null);
+  // Track open section by ID to ensure updates from the editor reflect immediately
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
 
   // Determine which profile data to use: prop (preview) or fetched (live)
   const rawProfile = initialData || fetchedProfile;
@@ -35,6 +35,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
       links: validObjects(rawProfile.links),
       sections: validObjects(rawProfile.sections)
   } : null;
+
+  // Derive the active section object from the current profile state
+  const activeSection = activeSectionId && profile?.sections 
+      ? profile.sections.find(s => s.id === activeSectionId) || null 
+      : null;
 
   useEffect(() => {
     if (username && !initialData) {
@@ -96,9 +101,17 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
   // Get Dynamic Styles
   const themeStyles = getThemeClasses(profile.theme);
   
+  // Filter sections: Hide empty sections in LIVE mode, show ALL in PREVIEW mode
+  const visibleSections = profile.sections 
+      ? profile.sections.filter(s => {
+          const hasItems = Array.isArray(s.items) && s.items.length > 0;
+          return hasItems || disableNavigation;
+      })
+      : [];
+  
   return (
     <>
-      <ThemeWrapper theme={profile.theme}>
+      <ThemeWrapper theme={profile.theme} className={disableNavigation ? 'min-h-full' : 'min-h-screen'}>
         <div className="w-full flex justify-center min-h-[inherit]">
           {/* Main Content Container */}
           <div className="w-full max-w-2xl px-5 py-12 md:py-20 flex flex-col items-center animate-fade-in relative z-10">
@@ -178,7 +191,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                   ))}
 
                   {/* Sections / Projects Triggers */}
-                  {profile.sections && profile.sections.length > 0 && (
+                  {visibleSections.length > 0 && (
                       <div className="pt-6 animate-slide-up space-y-4" style={{ animationDelay: '0.2s' }}>
                           <div className={`flex items-center gap-4 mb-2 opacity-40 px-2`}>
                               <div className={`h-px flex-1 bg-current`}></div>
@@ -186,62 +199,67 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
                               <div className={`h-px flex-1 bg-current`}></div>
                           </div>
 
-                          {profile.sections.map((section, sIdx) => (
-                              <button 
-                                  key={section.id || sIdx}
-                                  onClick={() => setOpenSectionIndex(sIdx)}
-                                  className="w-full outline-none focus:outline-none text-left"
-                              >
-                                   {section.thumbnail ? (
-                                      // Hero Image Trigger
-                                      <div className={`w-full aspect-[2/1] relative overflow-hidden shadow-2xl group cursor-pointer ring-1 ring-black/5 ${themeStyles.cardBase.split('p-4')[0]} p-0 ${themeStyles.cardColors}`}>
-                                          <img 
-                                              src={section.thumbnail} 
-                                              alt={section.title} 
-                                              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" 
-                                          />
-                                          <div className={`absolute inset-0 bg-gradient-to-t ${themeStyles.featuredCardOverlay}`} />
-                                          
-                                          <div className="absolute bottom-0 left-0 p-6 text-left w-full z-10">
-                                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider border border-white/10 mb-2">
-                                                  <Layers className="w-3 h-3" /> Section
-                                              </div>
-                                              <h3 className="text-xl font-bold text-white mb-1">{section.title}</h3>
-                                              <div className="flex items-center justify-between">
-                                                  <p className="text-white/80 text-xs font-medium line-clamp-1">{section.description}</p>
-                                                  <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all">
-                                                      <ChevronRight className="w-4 h-4" />
+                          {visibleSections.map((section, sIdx) => {
+                              // Ensure we have a valid key, fallback to index if id is missing during creation
+                              const key = section.id || `section-${sIdx}`;
+                              
+                              return (
+                                  <button 
+                                      key={key}
+                                      onClick={() => setActiveSectionId(section.id)}
+                                      className="w-full outline-none focus:outline-none text-left"
+                                  >
+                                       {section.thumbnail ? (
+                                          // Hero Image Trigger
+                                          <div className={`w-full aspect-[2/1] relative overflow-hidden shadow-2xl group cursor-pointer ring-1 ring-black/5 ${themeStyles.cardBase.split('p-4')[0]} p-0 ${themeStyles.cardColors}`}>
+                                              <img 
+                                                  src={section.thumbnail} 
+                                                  alt={section.title} 
+                                                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" 
+                                              />
+                                              <div className={`absolute inset-0 bg-gradient-to-t ${themeStyles.featuredCardOverlay}`} />
+                                              
+                                              <div className="absolute bottom-0 left-0 p-6 text-left w-full z-10">
+                                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider border border-white/10 mb-2">
+                                                      <Layers className="w-3 h-3" /> Section
+                                                  </div>
+                                                  <h3 className="text-xl font-bold text-white mb-1">{section.title}</h3>
+                                                  <div className="flex items-center justify-between">
+                                                      <p className="text-white/80 text-xs font-medium line-clamp-1">{section.description}</p>
+                                                      <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all">
+                                                          <ChevronRight className="w-4 h-4" />
+                                                      </div>
                                                   </div>
                                               </div>
                                           </div>
-                                      </div>
-                                  ) : (
-                                      // Styled Card Trigger
-                                      <div className={`
-                                          group w-full ${themeStyles.cardBase} ${themeStyles.cardColors} ${themeStyles.cardHover}
-                                      `}>
-                                          <div className="flex items-center gap-4">
-                                              <div className={`
-                                                  w-12 h-12 flex items-center justify-center shrink-0 opacity-80
-                                                  ${themeStyles.avatarClass.includes('rounded-full') ? 'rounded-full' : 'rounded-lg'}
-                                                  border border-current
-                                              `}>
-                                                  {section.icon ? getGenericIcon(section.icon, "w-6 h-6") : <Layers className="w-6 h-6" />}
+                                      ) : (
+                                          // Styled Card Trigger
+                                          <div className={`
+                                              group w-full ${themeStyles.cardBase} ${themeStyles.cardColors} ${themeStyles.cardHover}
+                                          `}>
+                                              <div className="flex items-center gap-4">
+                                                  <div className={`
+                                                      w-12 h-12 flex items-center justify-center shrink-0 opacity-80
+                                                      ${themeStyles.avatarClass.includes('rounded-full') ? 'rounded-full' : 'rounded-lg'}
+                                                      border border-current
+                                                  `}>
+                                                      {section.icon ? getGenericIcon(section.icon, "w-6 h-6") : <Layers className="w-6 h-6" />}
+                                                  </div>
+                                                  <div className="text-left flex-1">
+                                                      <h3 className="font-bold text-lg">{section.title}</h3>
+                                                      {section.description && (
+                                                          <p className="text-xs opacity-70">{section.description}</p>
+                                                      )}
+                                                  </div>
                                               </div>
-                                              <div className="text-left flex-1">
-                                                  <h3 className="font-bold text-lg">{section.title}</h3>
-                                                  {section.description && (
-                                                      <p className="text-xs opacity-70">{section.description}</p>
-                                                  )}
+                                              <div className="opacity-50 group-hover:opacity-100 transition-opacity">
+                                                  <ChevronRight className="w-5 h-5" />
                                               </div>
                                           </div>
-                                          <div className="opacity-50 group-hover:opacity-100 transition-opacity">
-                                              <ChevronRight className="w-5 h-5" />
-                                          </div>
-                                      </div>
-                                  )}
-                              </button>
-                          ))}
+                                      )}
+                                  </button>
+                              );
+                          })}
                       </div>
                   )}
               </main>
@@ -259,9 +277,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigatio
 
       {/* Dynamic Projects Drawer for Active Section */}
       <ProjectsDrawer 
-        isOpen={openSectionIndex !== null} 
-        onClose={() => setOpenSectionIndex(null)} 
-        section={openSectionIndex !== null && profile.sections ? profile.sections[openSectionIndex] : null}
+        isOpen={activeSection !== null} 
+        onClose={() => setActiveSectionId(null)} 
+        section={activeSection}
         themeStyles={themeStyles}
       />
     </>
@@ -309,10 +327,15 @@ const LinkCard: React.FC<{ link: LinkItem; theme: ProfileTheme; index: number; d
                    {/* Standard Layout (Row) */}
                    <div className="flex items-center gap-4 min-w-0">
                        <div className={`
-                          w-10 h-10 flex items-center justify-center transition-colors shrink-0 opacity-80
+                          w-10 h-10 flex items-center justify-center transition-colors shrink-0 opacity-80 overflow-hidden
                           ${themeStyles.avatarClass.includes('rounded-full') ? 'rounded-full' : 'rounded-lg'}
                        `}>
-                           {getGenericIcon(link.icon)}
+                           {/* Render Thumbnail Image if available, else Icon */}
+                           {link.thumbnail ? (
+                               <img src={link.thumbnail} alt="" className="w-full h-full object-cover" />
+                           ) : (
+                               getGenericIcon(link.icon)
+                           )}
                        </div>
                        <span className="font-semibold text-sm md:text-base pr-2 truncate">{link.title}</span>
                    </div>
@@ -378,6 +401,7 @@ interface ProjectsDrawerProps {
 }
 
 const ProjectsDrawer: React.FC<ProjectsDrawerProps> = ({ isOpen, onClose, section, themeStyles }) => {
+    // Dynamically get projects from props to ensure live updates from editor
     const projects = section ? Array.isArray(section.items) ? section.items.filter(p => p && typeof p === 'object') : [] : [];
     
     useEffect(() => {

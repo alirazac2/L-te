@@ -148,9 +148,10 @@ export const THEME_STYLES: Record<ThemeType, ThemeDefinition> = {
 interface ThemeWrapperProps {
   theme: ProfileTheme;
   children: React.ReactNode;
+  className?: string; // Allow override
 }
 
-export const ThemeWrapper: React.FC<ThemeWrapperProps> = ({ theme, children }) => {
+export const ThemeWrapper: React.FC<ThemeWrapperProps> = ({ theme, children, className }) => {
   const definition = THEME_STYLES[theme?.type || ThemeType.ModernBlack] || THEME_STYLES[ThemeType.ModernBlack];
 
   // Helper class for ForestGlass overlay
@@ -158,7 +159,7 @@ export const ThemeWrapper: React.FC<ThemeWrapperProps> = ({ theme, children }) =
 
   return (
     <div 
-        className={`min-h-screen w-full transition-colors duration-500 ease-in-out relative overflow-x-hidden ${definition.bgClass} ${definition.textClass} ${definition.font}`}
+        className={`w-full transition-colors duration-500 ease-in-out relative overflow-x-hidden ${definition.bgClass} ${definition.textClass} ${definition.font} ${className || 'min-h-screen'}`}
         style={{
              ...(theme?.customBackground ? { background: theme.customBackground } : {}),
              ...(theme?.customTextColor ? { color: theme.customTextColor } : {})
@@ -178,16 +179,22 @@ export const getThemeClasses = (theme: ProfileTheme) => {
     return THEME_STYLES[type] || THEME_STYLES[ThemeType.ModernBlack];
 };
 
-// Backwards compatibility for LinkCard logic, updated to use new system
+// Updated logic to safely strip padding/flex from Featured cards
 export const getCardClasses = (theme: ProfileTheme, featured: boolean = false): string => {
   const styles = getThemeClasses(theme);
   
-  const base = `${styles.cardBase} ${styles.cardColors} ${styles.cardHover} cursor-pointer relative group overflow-hidden`;
-
   if (featured) {
-      // Return a specific set for featured card container
-      return `${styles.cardBase.split('p-4')[0]} p-0 ${styles.cardColors} ${styles.cardHover} cursor-pointer relative group overflow-hidden`;
+      // Remove any padding classes (p-4, p-5, etc) and flex/items-center to ensure full bleed image
+      const cleanBase = styles.cardBase
+        .replace(/\bp-\d+\s*/g, '') // Remove padding
+        .replace(/\bflex\b/g, '') // Remove flex
+        .replace(/\bitems-center\b/g, '')
+        .replace(/\bjustify-between\b/g, '');
+
+      // Return a specific set for featured card container with block layout and no padding
+      return `${cleanBase} p-0 block ${styles.cardColors} ${styles.cardHover} cursor-pointer relative group overflow-hidden`;
   }
 
-  return base;
+  // Standard Card
+  return `${styles.cardBase} ${styles.cardColors} ${styles.cardHover} cursor-pointer relative group overflow-hidden`;
 };

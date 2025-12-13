@@ -21,7 +21,9 @@ const DEMO_PROFILES: Record<string, UserProfile> = {
             title: 'Featured Projects',
             description: 'Check out my work',
             icon: 'Layers',
-            items: []
+            items: [
+                { id: 'p1', title: 'Example Project', description: 'This is a demo project', url: 'https://example.com' }
+            ]
         }
     ]
   }

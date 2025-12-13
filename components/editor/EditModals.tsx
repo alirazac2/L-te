@@ -35,8 +35,12 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
   const [iconSearch, setIconSearch] = useState('');
   
   const [triggerMediaType, setTriggerMediaType] = useState<'icon' | 'image'>('icon');
+  
+  // For Link Modal: Toggle between Icon and Custom Image for standard layout
+  const [linkMediaType, setLinkMediaType] = useState<'icon' | 'image'>('icon');
 
   useEffect(() => {
+    // Reset internal state when modal opens
     if (modal.type === 'section_trigger' && modal.data) {
         if (modal.data.thumbnail) {
             setTriggerMediaType('image');
@@ -44,7 +48,17 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
             setTriggerMediaType('icon');
         }
     }
-  }, [modal.type]); 
+    
+    if (modal.type === 'link' && modal.data) {
+        // If featured, it's always image based in current logic (thumbnail)
+        // If standard, check if thumbnail exists
+        if (modal.data.featured || modal.data.thumbnail) {
+            setLinkMediaType('image');
+        } else {
+            setLinkMediaType('icon');
+        }
+    }
+  }, [modal.type, modal.index]); 
 
   const handleOpenIconPicker = () => {
       setShowIconPicker(true);
@@ -58,6 +72,16 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
       } else {
           onUpdateData('thumbnail', '');
           if (!modal.data.icon) onUpdateData('icon', 'Layers');
+      }
+  };
+  
+  const handleLinkMediaTypeChange = (type: 'icon' | 'image') => {
+      setLinkMediaType(type);
+      if (type === 'image') {
+           // We keep the icon as fallback or clear it? Better to keep icon as fallback in DB but UI prioritizes thumb.
+           // But for clean data, maybe clear icon if image is set? No, icon is used for placeholder.
+      } else {
+          onUpdateData('thumbnail', '');
       }
   };
 
@@ -102,11 +126,39 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                         
                         <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                              <div className="flex items-center gap-3 mb-4">
-                                <input type="checkbox" id="modal-feat" checked={modal.data.featured} onChange={e => onUpdateData('featured', e.target.checked)} className="w-4 h-4 text-indigo-600 rounded" />
+                                <input 
+                                    type="checkbox" 
+                                    id="modal-feat" 
+                                    checked={modal.data.featured} 
+                                    onChange={e => {
+                                        onUpdateData('featured', e.target.checked);
+                                        // If enabling featured, switch media view to image automatically for UX
+                                        if(e.target.checked) setLinkMediaType('image');
+                                    }} 
+                                    className="w-4 h-4 text-indigo-600 rounded" 
+                                />
                                 <label htmlFor="modal-feat" className="font-bold text-sm text-gray-700 select-none">Featured Card Layout</label>
                              </div>
                              
-                             {modal.data.featured ? (
+                             {/* Media Selection Tabs (Only show if not featured, because Featured is ALWAYS image) */}
+                             {!modal.data.featured && (
+                                 <div className="flex p-1 bg-gray-200 rounded-lg mb-4">
+                                    <button 
+                                        onClick={() => handleLinkMediaTypeChange('icon')}
+                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${linkMediaType === 'icon' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                    >
+                                        Icon
+                                    </button>
+                                    <button 
+                                        onClick={() => handleLinkMediaTypeChange('image')}
+                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${linkMediaType === 'image' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                    >
+                                        Image
+                                    </button>
+                                 </div>
+                             )}
+                             
+                             {(modal.data.featured || linkMediaType === 'image') ? (
                                  <div className="space-y-3 animate-fade-in">
                                      <div>
                                          <label className={LABEL_CLASS}>Thumbnail URL</label>
@@ -119,10 +171,12 @@ const EditModals: React.FC<EditModalsProps> = ({ modal, onClose, onSave, onUpdat
                                          />
                                           {errors.thumbnail && <span className="text-xs text-red-500 font-medium">{errors.thumbnail}</span>}
                                      </div>
-                                     <div>
-                                         <label className={LABEL_CLASS}>Description</label>
-                                         <input type="text" value={modal.data.description || ''} onChange={e => onUpdateData('description', e.target.value)} className={INPUT_CLASS} placeholder="Short text..." />
-                                     </div>
+                                     {modal.data.featured && (
+                                         <div>
+                                             <label className={LABEL_CLASS}>Description</label>
+                                             <input type="text" value={modal.data.description || ''} onChange={e => onUpdateData('description', e.target.value)} className={INPUT_CLASS} placeholder="Short text..." />
+                                         </div>
+                                     )}
                                  </div>
                              ) : (
                                  <div className="animate-fade-in">
