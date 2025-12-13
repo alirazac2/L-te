@@ -1,21 +1,21 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { fetchProfile } from '../services/dataService';
 import { UserProfile, LinkItem, ThemeType, ProjectItem } from '../types';
 import { ThemeWrapper, getButtonClasses } from './ThemeWrapper';
 import { getSocialIcon, getGenericIcon } from './Icons';
-import { BadgeCheck, Share2, AlertCircle, ChevronRight, ExternalLink, X, Layers } from 'lucide-react';
+import { BadgeCheck, Share2, AlertCircle, ChevronRight, ExternalLink, Layers } from 'lucide-react';
 
 interface ProfileViewProps {
     initialData?: UserProfile;
+    disableNavigation?: boolean;
 }
 
-const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
+const ProfileView: React.FC<ProfileViewProps> = ({ initialData, disableNavigation }) => {
   const { username } = useParams<{ username: string }>();
   const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState(false);
-  const [showProjectsModal, setShowProjectsModal] = useState(false);
 
   // Determine which profile data to use: prop (preview) or fetched (live)
   const profile = initialData || fetchedProfile;
@@ -24,7 +24,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
     // Only fetch if we don't have initialData (preview mode) and we have a username
     if (username && !initialData) {
       setLoading(true);
-      // Simulate network delay for skeleton demonstration (remove setTimeout in prod if real API)
       const timer = setTimeout(() => {
           fetchProfile(username)
             .then((data) => {
@@ -93,6 +92,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
   const isLightTheme = profile.theme.type === ThemeType.CleanWhite;
   const projectCard = profile.projectCard || { title: 'Featured Projects', description: 'Explore my portfolio', icon: 'Layers' };
   
+  // Use current username from URL or profile data (fallback for editor)
+  const profileUsername = username || profile.username;
+
   return (
     <ThemeWrapper theme={profile.theme}>
       <div className="min-h-screen w-full flex justify-center overflow-x-hidden">
@@ -146,6 +148,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                                     : 'bg-white/10 border border-white/5 text-white/90 shadow-lg backdrop-blur-sm hover:bg-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:text-white hover:border-white/20'}
                             `}
                             aria-label={social.platform}
+                            onClick={e => { if(disableNavigation) e.preventDefault(); }}
                         >
                             {getSocialIcon(social.platform, "w-5 h-5 transition-transform duration-300")}
                         </a>
@@ -160,12 +163,13 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                         key={link.id} 
                         link={link} 
                         theme={profile.theme} 
-                        index={idx} 
+                        index={idx}
+                        disableNavigation={disableNavigation}
                     />
                 ))}
             </main>
 
-            {/* Customizable Projects Trigger Card */}
+            {/* Customizable Projects Trigger Card -> LINKS TO SEPARATE PAGE */}
             {profile.projects && profile.projects.length > 0 && (
                 <section className="w-full z-10 mt-8 mb-8 relative animate-fade-in delay-200">
                     <div className={`flex items-center gap-4 mb-5 opacity-40 px-2 ${isLightTheme ? 'text-black' : 'text-white'}`}>
@@ -174,10 +178,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                         <div className="h-px bg-current flex-1 rounded-full" />
                     </div>
 
-                    <button
-                        onClick={() => setShowProjectsModal(true)}
+                    <Link
+                        to={`/${profileUsername}/projects`}
+                        onClick={e => { if (disableNavigation) e.preventDefault(); }}
                         className={`
-                            w-full p-1 rounded-[1.5rem] transition-all duration-300 ease-out active:scale-[0.98] group relative
+                            block w-full p-1 rounded-[1.5rem] transition-all duration-300 ease-out active:scale-[0.98] group relative
                             ${isLightTheme 
                                 ? 'bg-gradient-to-br from-gray-100 to-white shadow-sm hover:shadow-md' 
                                 : 'bg-gradient-to-br from-white/10 to-white/5 shadow-2xl hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]'}
@@ -201,7 +206,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                                     ) : projectCard.icon ? (
                                         getGenericIcon(projectCard.icon, "w-7 h-7")
                                     ) : (
-                                        // Nothing selected (transparent/empty), or fallback
                                         <Layers className="w-7 h-7 opacity-20" />
                                     )}
                                 </div>
@@ -223,7 +227,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                                 <ChevronRight className="w-5 h-5" />
                             </div>
                         </div>
-                    </button>
+                    </Link>
                 </section>
             )}
 
@@ -233,16 +237,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ initialData }) => {
                     BioLinker © {new Date().getFullYear()}
                 </a>
             </footer>
-
-            {/* All Projects Modal */}
-            {showProjectsModal && profile.projects && (
-                <ProjectsListModal 
-                    projects={profile.projects} 
-                    onClose={() => setShowProjectsModal(false)} 
-                    isLightTheme={isLightTheme}
-                    triggerTitle={projectCard.title}
-                />
-            )}
 
         </div>
       </div>
@@ -267,7 +261,6 @@ const AvatarWithSkeleton: React.FC<{ src: string; alt: string; fallbackChar: str
                     />
                     {isLoading && (
                         <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
-                            {/* Optional: Add a subtle placeholder icon or text inside skeleton if needed */}
                         </div>
                     )}
                 </>
@@ -359,181 +352,27 @@ const ProfileSkeleton: React.FC = () => {
     );
 };
 
-// --- Sub Components ---
-
-const ProjectsListModal: React.FC<{ projects: ProjectItem[]; onClose: () => void; isLightTheme: boolean; triggerTitle: string }> = ({ projects, onClose, isLightTheme, triggerTitle }) => {
-    const [translateY, setTranslateY] = useState(0);
-    const [isDragging, setIsDragging] = useState(false);
-    const startY = useRef(0);
-    const modalContentRef = useRef<HTMLDivElement>(null);
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        // Only trigger drag if we are at the top of the scroll container
-        if (modalContentRef.current?.scrollTop === 0) {
-            setIsDragging(true);
-            startY.current = e.touches[0].clientY;
-        }
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isDragging) return;
-        const currentY = e.touches[0].clientY;
-        const diff = currentY - startY.current;
-        
-        // Only allow dragging down
-        if (diff > 0) {
-            setTranslateY(diff);
-        }
-    };
-
-    const handleTouchEnd = () => {
-        setIsDragging(false);
-        if (translateY > 100) {
-            onClose();
-        } else {
-            setTranslateY(0);
-        }
-    };
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onClose]);
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-            {/* Backdrop */}
-            <div 
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" 
-                onClick={onClose}
-            />
-            
-            {/* Modal Sheet */}
-            <div 
-                className={`
-                    relative w-full max-w-lg mx-auto flex flex-col
-                    rounded-t-[2rem] sm:rounded-2xl shadow-2xl overflow-hidden
-                    transform transition-transform duration-300 ease-out
-                    ${isLightTheme ? 'bg-white text-gray-900' : 'bg-[#121212] text-white border border-white/10'}
-                `}
-                style={{ 
-                    transform: `translateY(${translateY}px)`,
-                    maxHeight: '85vh',
-                    height: '80vh',
-                    transition: isDragging ? 'none' : undefined 
-                }}
-            >
-                {/* Drag Handle & Header */}
-                <div 
-                    className={`
-                        w-full pt-4 pb-4 px-6 flex flex-col items-center shrink-0 cursor-grab active:cursor-grabbing touch-none z-10
-                        ${isLightTheme ? 'bg-white border-b border-gray-100' : 'bg-[#121212] border-b border-white/5'}
-                    `}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    <div className="w-12 h-1.5 rounded-full bg-gray-300/50 mb-4" />
-                    <div className="w-full flex items-center justify-between">
-                         <h2 className="text-lg font-bold">{triggerTitle}</h2>
-                         <button 
-                            onClick={onClose}
-                            className={`p-2 rounded-full transition-colors ${isLightTheme ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/10 hover:bg-white/20'}`}
-                        >
-                            <X className="w-4 h-4 opacity-70" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Scrollable Content */}
-                <div ref={modalContentRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-8">
-                    {projects.map((project, idx) => (
-                        <div key={project.id || idx} className="w-full group">
-                            {/* Project Header */}
-                            <div className="mb-4">
-                                {project.thumbnail && (
-                                    <div className={`rounded-xl overflow-hidden aspect-video w-full shadow-lg mb-4 flex items-center justify-center relative ${isLightTheme ? 'bg-gray-50 border border-gray-100' : 'bg-white/5 border border-white/5'}`}>
-                                        <img src={project.thumbnail} alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                    </div>
-                                )}
-                                
-                                <div className="flex flex-col gap-2">
-                                    {project.tags && (
-                                        <div className="flex flex-wrap gap-2">
-                                            {project.tags.map(tag => (
-                                                <span key={tag} className={`text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-md ${isLightTheme ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-white/80'}`}>
-                                                    {tag}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <h3 className="text-xl font-bold leading-tight break-words">{project.title}</h3>
-                                </div>
-                            </div>
-                            
-                            {/* Description */}
-                            {project.description && (
-                                <p className={`text-sm leading-relaxed mb-4 break-words ${isLightTheme ? 'text-gray-600' : 'text-gray-300'}`}>
-                                    {project.description}
-                                </p>
-                            )}
-
-                            {/* Action Button */}
-                            {project.url && (
-                                <a 
-                                    href={project.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`
-                                        flex items-center justify-center gap-2 w-full py-3 rounded-lg font-semibold text-sm transition-all active:scale-[0.98]
-                                        ${isLightTheme 
-                                            ? 'bg-gray-50 text-gray-900 border border-gray-200 hover:bg-gray-100' 
-                                            : 'bg-white/10 text-white border border-white/5 hover:bg-white/20'}
-                                    `}
-                                >
-                                    <span>View Details</span>
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                </a>
-                            )}
-                            
-                            {/* Divider if not last */}
-                            {idx < projects.length - 1 && (
-                                <div className={`h-px w-full mt-8 ${isLightTheme ? 'bg-gray-100' : 'bg-white/5'}`} />
-                            )}
-                        </div>
-                    ))}
-                    
-                    {/* Bottom Padding */}
-                    <div className="h-4" />
-                </div>
-            </div>
-        </div>
-    );
-}
-
 interface LinkCardProps {
   link: LinkItem;
   theme: UserProfile['theme'];
   index: number;
+  disableNavigation?: boolean;
 }
 
-const LinkCard: React.FC<LinkCardProps> = ({ link, theme, index }) => {
+const LinkCard: React.FC<LinkCardProps> = ({ link, theme, index, disableNavigation }) => {
   const animationStyle = { 
       animationDelay: `${0.1 + (index * 0.05)}s`,
       animationFillMode: 'both' 
   };
 
   if (link.featured) {
-    return <FeaturedLinkItem link={link} theme={theme} style={animationStyle} />;
+    return <FeaturedLinkItem link={link} theme={theme} style={animationStyle} disableNavigation={disableNavigation} />;
   }
 
-  return <StandardLinkItem link={link} theme={theme} style={animationStyle} />;
+  return <StandardLinkItem link={link} theme={theme} style={animationStyle} disableNavigation={disableNavigation} />;
 };
 
-const FeaturedLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; style: React.CSSProperties }> = ({ link, theme, style }) => {
+const FeaturedLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; style: React.CSSProperties; disableNavigation?: boolean }> = ({ link, theme, style, disableNavigation }) => {
   const classes = getButtonClasses(theme, true);
   
   return (
@@ -543,6 +382,7 @@ const FeaturedLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; 
       rel="noopener noreferrer"
       className={`${classes} block group animate-slide-up transform-gpu overflow-hidden`}
       style={style}
+      onClick={e => { if(disableNavigation) e.preventDefault(); }}
     >
         <div className="relative aspect-[2/1] md:aspect-[2.4/1] w-full">
           {link.thumbnail ? (
@@ -576,7 +416,7 @@ const FeaturedLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; 
   );
 };
 
-const StandardLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; style: React.CSSProperties }> = ({ link, theme, style }) => {
+const StandardLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; style: React.CSSProperties; disableNavigation?: boolean }> = ({ link, theme, style, disableNavigation }) => {
   const classes = getButtonClasses(theme, false);
   const isCleanTheme = theme.type === ThemeType.CleanWhite;
   
@@ -587,6 +427,7 @@ const StandardLinkItem: React.FC<{ link: LinkItem; theme: UserProfile['theme']; 
       rel="noopener noreferrer"
       className={`${classes} animate-slide-up group py-3.5 px-4`}
       style={style}
+      onClick={e => { if(disableNavigation) e.preventDefault(); }}
     >
         {/* Left Slot: Thumbnail or Icon */}
         <div className="flex items-center justify-center w-10 h-10 shrink-0 mr-3">

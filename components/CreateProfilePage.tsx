@@ -584,7 +584,7 @@ const CreateProfilePage: React.FC = () => {
             </div>
 
             <PhoneMockup viewMode={viewMode}>
-                <ProfileView initialData={profile} />
+                <ProfileView initialData={profile} disableNavigation={true} />
             </PhoneMockup>
         </div>
 
