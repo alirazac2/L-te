@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ProfileView from './ProfileView';
 import { UserProfile, ThemeType, SocialPlatform, ProfileTheme } from '../types';
-import { UploadCloud, Save, ArrowLeft, Loader2, UserPlus, Wallet, X, Check, Smartphone, Edit2, Layout, Image, Link as LinkIcon, Share2, Layers } from 'lucide-react';
+import { UploadCloud, Save, ArrowLeft, Loader2, UserPlus, Wallet, X, Check, Smartphone, Edit2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { connectWallet, publishProfile, getProfileAddress, getUsernameByWallet, fetchProfileDataOnChain, checkWalletConnection } from '../services/blockchain';
 import { Toast, ToastType } from './Toast';
@@ -40,7 +40,6 @@ const DEFAULT_PROFILE: UserProfile = {
 // --- Types ---
 
 type ModalType = 'link' | 'project' | 'social' | 'project_trigger' | null;
-type EditorTab = 'identity' | 'theme' | 'projects' | 'links' | 'socials';
 
 interface ModalState {
     type: ModalType;
@@ -52,7 +51,6 @@ const CreateProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [initialProfileJson, setInitialProfileJson] = useState<string>(JSON.stringify(DEFAULT_PROFILE));
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
-  const [activeTab, setActiveTab] = useState<EditorTab>('identity');
   
   // Wallet & Auth State
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -121,14 +119,9 @@ const CreateProfilePage: React.FC = () => {
               setHasRegisteredProfile(true);
               const data = await fetchProfileDataOnChain(existingUsername);
               if (data) {
-                  // Ensure projectCard exists for older profiles and other defaults
+                  // Ensure projectCard exists for older profiles
                   const cleanData = {
-                      ...DEFAULT_PROFILE,
                       ...data,
-                      theme: data.theme || DEFAULT_PROFILE.theme,
-                      socials: data.socials || [],
-                      links: data.links || [],
-                      projects: data.projects || [],
                       projectCard: data.projectCard || DEFAULT_PROFILE.projectCard
                   };
                   setProfile(cleanData);
@@ -379,14 +372,6 @@ const CreateProfilePage: React.FC = () => {
       }
   };
 
-  const TABS: { id: EditorTab; label: string; icon: React.FC<any> }[] = [
-      { id: 'identity', label: 'Identity', icon: Layout },
-      { id: 'theme', label: 'Theme', icon: Image },
-      { id: 'projects', label: 'Projects', icon: Layers },
-      { id: 'links', label: 'Links', icon: LinkIcon },
-      { id: 'socials', label: 'Socials', icon: Share2 },
-  ];
-
   // --- Views ---
 
   if (isCheckingWallet) {
@@ -490,7 +475,7 @@ const CreateProfilePage: React.FC = () => {
             ${viewMode === 'preview' ? '-translate-x-full absolute md:static md:translate-x-0' : 'translate-x-0'}
         `}>
             {/* Header */}
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white z-10 shrink-0">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white z-10 shrink-0">
                 <div className="flex items-center gap-3">
                     <Link to="/" className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
                         <ArrowLeft className="w-5 h-5" />
@@ -523,90 +508,55 @@ const CreateProfilePage: React.FC = () => {
                 </div>
             )}
 
-            {/* Tabs Navigation */}
-            <div className="flex items-center px-2 py-2 border-b border-gray-100 overflow-x-auto no-scrollbar gap-1 bg-gray-50/50">
-                {TABS.map(tab => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`
-                                flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap
-                                ${isActive 
-                                    ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-gray-200' 
-                                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}
-                            `}
-                        >
-                            <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'opacity-70'}`} />
-                            {tab.label}
-                        </button>
-                    )
-                })}
-            </div>
-
             {/* Scrollable Form Area */}
-            <div className="flex-1 overflow-y-auto p-6 no-scrollbar bg-gray-50/30">
+            <div className="flex-1 overflow-y-auto p-6 space-y-10 no-scrollbar">
                 
-                {activeTab === 'identity' && (
-                    <div className="animate-fade-in">
-                        <IdentitySection 
-                            profile={profile} 
-                            onChange={handleIdentityChange} 
-                            errors={identityErrors}
-                            usernameStatus={usernameStatus}
-                            isUsernameLocked={true}
-                        />
-                    </div>
-                )}
+                <IdentitySection 
+                  profile={profile} 
+                  onChange={handleIdentityChange} 
+                  errors={identityErrors}
+                  usernameStatus={usernameStatus}
+                  isUsernameLocked={true}
+                />
 
-                {activeTab === 'theme' && (
-                    <div className="animate-fade-in">
-                         <ThemeSection 
-                            profile={profile} 
-                            onChange={handleThemeChange} 
-                        />
-                    </div>
-                )}
+                <hr className="border-gray-100" />
 
-                {activeTab === 'projects' && (
-                    <div className="animate-fade-in">
-                        <ProjectsEditor 
-                            projects={profile.projects || []}
-                            projectCard={profile.projectCard || { title: 'Featured Projects', description: 'See more', icon: 'Layers' }}
-                            onAdd={() => openModal('project', null)}
-                            onEdit={(idx) => openModal('project', idx)}
-                            onDelete={(idx) => deleteItem(idx, 'project')}
-                            onMove={(idx, dir) => moveItem(idx, dir, 'project')}
-                            onEditTrigger={() => openModal('project_trigger', null)}
-                        />
-                    </div>
-                )}
+                <ThemeSection 
+                  profile={profile} 
+                  onChange={handleThemeChange} 
+                />
 
-                {activeTab === 'links' && (
-                    <div className="animate-fade-in">
-                         <LinksEditor 
-                            links={profile.links}
-                            onAdd={() => openModal('link', null)}
-                            onEdit={(idx) => openModal('link', idx)}
-                            onDelete={(idx) => deleteItem(idx, 'link')}
-                            onMove={(idx, dir) => moveItem(idx, dir, 'link')}
-                        />
-                    </div>
-                )}
+                <hr className="border-gray-100" />
 
-                {activeTab === 'socials' && (
-                    <div className="animate-fade-in">
-                         <SocialsEditor 
-                            socials={profile.socials}
-                            onAdd={() => openModal('social', null)}
-                            onEdit={(idx) => openModal('social', idx)}
-                            onDelete={(idx) => deleteItem(idx, 'social')}
-                            onMove={(idx, dir) => moveItem(idx, dir, 'social')}
-                        />
-                    </div>
-                )}
+                <ProjectsEditor 
+                  projects={profile.projects || []}
+                  projectCard={profile.projectCard || { title: 'Featured Projects', description: 'See more', icon: 'Layers' }}
+                  onAdd={() => openModal('project', null)}
+                  onEdit={(idx) => openModal('project', idx)}
+                  onDelete={(idx) => deleteItem(idx, 'project')}
+                  onMove={(idx, dir) => moveItem(idx, dir, 'project')}
+                  onEditTrigger={() => openModal('project_trigger', null)}
+                />
+
+                <hr className="border-gray-100" />
+
+                <LinksEditor 
+                  links={profile.links}
+                  onAdd={() => openModal('link', null)}
+                  onEdit={(idx) => openModal('link', idx)}
+                  onDelete={(idx) => deleteItem(idx, 'link')}
+                  onMove={(idx, dir) => moveItem(idx, dir, 'link')}
+                />
+
+                <hr className="border-gray-100" />
+
+                <SocialsEditor 
+                  socials={profile.socials}
+                  onAdd={() => openModal('social', null)}
+                  onEdit={(idx) => openModal('social', idx)}
+                  onDelete={(idx) => deleteItem(idx, 'social')}
+                  onMove={(idx, dir) => moveItem(idx, dir, 'social')}
+                />
 
             </div>
         </div>

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import ProfileView from './components/ProfileView';
+import ProjectsPage from './components/ProjectsPage';
 import CreateProfilePage from './components/CreateProfilePage';
-import NotFound from './components/NotFound';
 import { Footer } from './components/Footer';
 import { searchProfiles } from './services/dataService';
 import { connectWallet, checkWalletConnection } from './services/blockchain';
@@ -220,7 +220,7 @@ const App: React.FC = () => {
         <Route path="/" element={<Landing />} />
         <Route path="/new" element={<CreateProfilePage />} />
         <Route path="/:username" element={<ProfileView />} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="/:username/projects" element={<ProjectsPage />} />
       </Routes>
     </BrowserRouter>
   );

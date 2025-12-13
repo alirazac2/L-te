@@ -49,14 +49,8 @@ const ICON_MAP: Record<string, React.FC<any>> = {
   Coffee, Smile, MessageCircle, Send, Zap, Bookmark, Anchor, Key, Lock, Shield, CheckCircle2, AlertCircle
 };
 
-export const getGenericIcon = (name: string | undefined | null, className?: string) => {
+export const getGenericIcon = (name: string, className?: string) => {
   const props = { className: className || "w-5 h-5" };
-  
-  // Safety check to prevent crashes if name is not a string
-  if (!name || typeof name !== 'string') {
-      return <LinkIcon {...props} />;
-  }
-
   const normalizedName = name.trim();
   
   // 1. Try direct match

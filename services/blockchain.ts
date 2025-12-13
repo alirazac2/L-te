@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { CONTRACTS, kiteAI } from './web3Config';
 import { ProfileContractABI, ProfileHubABI } from './abis';
-import { UserProfile, ThemeType } from '../types';
+import { UserProfile } from '../types';
 
 declare global {
   interface Window {
@@ -129,42 +129,7 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
         const jsonString = await profileContract.getUserData();
         
         if (!jsonString) return null;
-        
-        // Safety: ensure parsing doesn't crash app if JSON is bad
-        let rawData;
-        try {
-            rawData = JSON.parse(jsonString);
-        } catch (parseError) {
-            console.error("JSON parse error for user:", username, parseError);
-            return null;
-        }
-
-        if (typeof rawData !== 'object' || rawData === null) return null;
-
-        // Strict sanitization to prevent UI crashes on null items
-        const safeArray = (arr: any) => Array.isArray(arr) ? arr.filter((i: any) => i && typeof i === 'object') : [];
-
-        // Sanitize projects deeply
-        const sanitizedProjects = safeArray(rawData.projects).map((p: any) => ({
-            ...p,
-            tags: Array.isArray(p.tags) ? p.tags.filter((t: any) => typeof t === 'string') : []
-        }));
-
-        // Sanitize data to prevent crashes if on-chain data is old or malformed
-        const safeData: UserProfile = {
-            username: rawData.username || username,
-            displayName: rawData.displayName || username,
-            bio: rawData.bio || '',
-            avatarUrl: rawData.avatarUrl || '',
-            verified: !!rawData.verified,
-            theme: (rawData.theme && typeof rawData.theme === 'object') ? rawData.theme : { type: ThemeType.ModernBlack },
-            socials: safeArray(rawData.socials),
-            links: safeArray(rawData.links),
-            projects: sanitizedProjects,
-            projectCard: (rawData.projectCard && typeof rawData.projectCard === 'object') ? rawData.projectCard : { title: 'Featured Projects', description: 'See my work', icon: 'Layers' }
-        };
-
-        return safeData;
+        return JSON.parse(jsonString) as UserProfile;
     } catch (e) {
         console.error(`Failed to fetch on-chain data for ${username}`, e);
         return null;
