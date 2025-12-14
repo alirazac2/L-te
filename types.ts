@@ -11,6 +11,13 @@ export enum SocialPlatform {
 }
 
 export enum ThemeType {
+  Base = 'base',
+  BaseDark = 'base-dark',
+  BaseSoft = 'base-soft',
+  BaseDev = 'base-dev',
+  BlackGem = 'black-gem',
+  BlackGemV2 = 'black-gem-v2',
+
   ModernBlack = 'modern-black',
   CleanWhite = 'clean-white',
   GradientBlue = 'gradient-blue',
@@ -20,7 +27,32 @@ export enum ThemeType {
   SoftPastel = 'soft-pastel',
   RetroPixel = 'retro-pixel',
   NeoBrutalism = 'neo-brutalism',
-  LuxuryGold = 'luxury-gold'
+  LuxuryGold = 'luxury-gold',
+  IslandParadise = 'island-paradise',
+  UrbanJungle = 'urban-jungle',
+  MinimalistGrey = 'minimalist-grey',
+  VibrantPop = 'vibrant-pop',
+  CloudsDream = 'clouds-dream',
+  MidnightBloom = 'midnight-bloom',
+  TechBlueprint = 'tech-blueprint',
+  VintagePaper = 'vintage-paper',
+  NeonNight = 'neon-night',
+  CoffeeHouse = 'coffee-house',
+  NordicFrost = 'nordic-frost',
+  TerminalConsole = 'terminal-console',
+  BubbleGum = 'bubble-gum',
+  SpaceOdyssey = 'space-odyssey',
+  GlassPrism = 'glass-prism',
+  LavaLamp = 'lava-lamp',
+  SketchyNote = 'sketchy-note',
+  CyberGlitch = 'cyber-glitch',
+  RoyalVelvet = 'royal-velvet',
+  Newspaper = 'newspaper',
+  MintFresh = 'mint-fresh',
+  OutlineNeon = 'outline-neon',
+  CarbonFiber = 'carbon-fiber',
+  SakuraSeason = 'sakura-season',
+  EightBitDungeon = 'eight-bit-dungeon'
 }
 
 export interface SocialLink {
