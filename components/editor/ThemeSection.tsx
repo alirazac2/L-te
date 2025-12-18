@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { UserProfile, ThemeType, ProfileTheme } from '../../types';
 import { SECTION_TITLE_CLASS } from './editorUtils';
 import { THEME_STYLES } from '../ThemeWrapper';
@@ -11,6 +11,20 @@ interface ThemeSectionProps {
 }
 
 const ThemeSection: React.FC<ThemeSectionProps> = ({ profile, onChange }) => {
+  const selectedRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+      // Use requestAnimationFrame to wait for paint cycle and ensure parent scroll reset is complete
+      requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+              if (selectedRef.current) {
+                  // behavior: 'auto' snaps instantly, avoiding interruptions if the user interacts immediately
+                  selectedRef.current.scrollIntoView({ behavior: 'auto', block: 'center' });
+              }
+          });
+      });
+  }, []);
+
   return (
     <section>
         <h2 className={SECTION_TITLE_CLASS}>Select Theme</h2>
@@ -22,6 +36,7 @@ const ThemeSection: React.FC<ThemeSectionProps> = ({ profile, onChange }) => {
                 return (
                     <button
                         key={themeKey}
+                        ref={isSelected ? selectedRef : null}
                         onClick={() => onChange(themeKey)}
                         className={`
                             relative group flex flex-col items-center gap-3 p-4 rounded-xl border transition-all duration-300 text-left overflow-hidden

@@ -1,4 +1,8 @@
+
 import { MainRegistryABI, ProfileHubABI } from './abis';
+import { AppKitNetwork } from '@reown/appkit/networks';
+
+export const PROJECT_ID = '50fb989b5ef30d9441add56d35aa87d6';
 
 export const kiteAI = {
     chainId: 2368,
@@ -8,6 +12,26 @@ export const kiteAI = {
     explorerUrl: 'https://testnet.kitescan.ai',
     rpcUrl: 'https://rpc-testnet.gokite.ai'
 };
+
+// Reown Network Definition
+export const kiteAINetwork = {
+  id: 2368,
+  name: 'KiteAI Testnet',
+  network: 'kiteai-testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'KITE',
+    symbol: 'KITE',
+  },
+  rpcUrls: {
+    default: { http: ['https://rpc-testnet.gokite.ai'] },
+    public: { http: ['https://rpc-testnet.gokite.ai'] },
+  },
+  blockExplorers: {
+    default: { name: 'KiteScan', url: 'https://testnet.kitescan.ai' },
+  },
+  testnet: true,
+} as const; 
 
 export const CONTRACTS = {
     MAIN_REGISTRY: {

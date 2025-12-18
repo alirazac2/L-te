@@ -13,73 +13,6 @@ declare global {
 // Read-only provider for fetching data without wallet
 const readProvider = new ethers.providers.JsonRpcProvider(kiteAI.rpcUrl);
 
-export const connectWallet = async () => {
-  if (!window.ethereum) throw new Error("No wallet found");
-  
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  await provider.send("eth_requestAccounts", []); // Forces popup if not connected
-  const signer = provider.getSigner();
-  const address = await signer.getAddress();
-  const network = await provider.getNetwork();
-
-  // Validate Chain
-  if (network.chainId !== kiteAI.chainId) {
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: kiteAI.chainIdHex }],
-      });
-    } catch (switchError: any) {
-      if (switchError.code === 4902) {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [
-            {
-              chainId: kiteAI.chainIdHex,
-              chainName: kiteAI.name,
-              nativeCurrency: {
-                name: kiteAI.currency,
-                symbol: kiteAI.currency,
-                decimals: 18,
-              },
-              rpcUrls: [kiteAI.rpcUrl],
-              blockExplorerUrls: [kiteAI.explorerUrl],
-            },
-          ],
-        });
-      }
-    }
-  }
-
-  // Persist connection state
-  localStorage.setItem('bioLinkerWalletConnected', 'true');
-
-  return { provider, signer, address };
-};
-
-/**
- * Checks if wallet was previously connected and tries to reconnect silently.
- */
-export const checkWalletConnection = async () => {
-    const wasConnected = localStorage.getItem('bioLinkerWalletConnected') === 'true';
-    if (!wasConnected || !window.ethereum) return null;
-
-    try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        // Get accounts without prompting popup
-        const accounts = await provider.listAccounts(); 
-        
-        if (accounts.length > 0) {
-            const signer = provider.getSigner();
-            const address = accounts[0];
-            return { provider, signer, address };
-        }
-    } catch (e) {
-        console.warn("Silent connect failed", e);
-    }
-    return null;
-};
-
 export const getProfileHubContract = (signerOrProvider: ethers.Signer | ethers.providers.Provider) => {
   return new ethers.Contract(CONTRACTS.PROFILE_HUB.address, CONTRACTS.PROFILE_HUB.abi, signerOrProvider);
 };
@@ -127,7 +60,12 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
         if (!address) return null;
 
         const profileContract = getProfileContract(address, readProvider);
-        const jsonString = await profileContract.getUserData();
+        
+        // Fetch Data and Owner Wallet in parallel
+        const [jsonString, ownerWallet] = await Promise.all([
+            profileContract.getUserData(),
+            profileContract.wallet()
+        ]);
         
         if (!jsonString) return null;
         
@@ -183,7 +121,8 @@ export const fetchProfileDataOnChain = async (username: string): Promise<UserPro
             theme: (rawData.theme && typeof rawData.theme === 'object') ? rawData.theme : { type: ThemeType.ModernBlack },
             socials: safeArray(rawData.socials),
             links: safeArray(rawData.links),
-            sections: sections
+            sections: sections,
+            ownerWallet: ownerWallet // Add the fetched owner wallet
         };
 
         return safeData;

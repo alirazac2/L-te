@@ -7,7 +7,23 @@ export enum SocialPlatform {
   Youtube = 'youtube',
   Facebook = 'facebook',
   Tiktok = 'tiktok',
-  Email = 'email'
+  Email = 'email',
+  
+  // Messaging & Chat
+  Whatsapp = 'whatsapp',
+  Telegram = 'telegram',
+  Discord = 'discord',
+  Wechat = 'wechat',
+  Line = 'line',
+  Qq = 'qq',
+  Kakaotalk = 'kakaotalk',
+  
+  // Other Socials
+  Snapchat = 'snapchat',
+  Reddit = 'reddit',
+  Pinterest = 'pinterest',
+  Spotify = 'spotify',
+  Weibo = 'weibo'
 }
 
 export enum ThemeType {
@@ -106,4 +122,5 @@ export interface UserProfile {
   socials: SocialLink[];
   links: LinkItem[];
   sections: SectionConfig[]; // Up to 4 sections
+  ownerWallet?: string; // The wallet address that owns this profile
 }

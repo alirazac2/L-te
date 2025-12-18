@@ -1,3 +1,4 @@
+
 import { SocialPlatform } from '../../types';
 
 export const SOCIAL_BASE_URLS: Record<SocialPlatform, string> = {
@@ -9,6 +10,22 @@ export const SOCIAL_BASE_URLS: Record<SocialPlatform, string> = {
     [SocialPlatform.Facebook]: 'https://facebook.com/',
     [SocialPlatform.Tiktok]: 'https://tiktok.com/@',
     [SocialPlatform.Email]: 'mailto:',
+
+    // Messaging & Chat
+    [SocialPlatform.Whatsapp]: 'https://wa.me/',
+    [SocialPlatform.Telegram]: 'https://t.me/',
+    [SocialPlatform.Discord]: 'https://discord.gg/',
+    [SocialPlatform.Wechat]: '', // ID based usually
+    [SocialPlatform.Line]: 'https://line.me/ti/p/',
+    [SocialPlatform.Qq]: '', // ID based usually
+    [SocialPlatform.Kakaotalk]: '', // ID based usually
+
+    // Other
+    [SocialPlatform.Snapchat]: 'https://snapchat.com/add/',
+    [SocialPlatform.Reddit]: 'https://reddit.com/user/',
+    [SocialPlatform.Pinterest]: 'https://pinterest.com/',
+    [SocialPlatform.Spotify]: 'https://open.spotify.com/user/',
+    [SocialPlatform.Weibo]: 'https://weibo.com/',
 };
 
 export const INPUT_CLASS = "w-full px-3 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-gray-400 text-sm disabled:bg-gray-100 disabled:text-gray-500";
