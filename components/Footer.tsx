@@ -1,18 +1,18 @@
 
 import React from 'react';
 import { Github, Twitter, Linkedin, Home, PlusCircle } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 interface FooterProps {
-  className?: string;
-  hideNew?: boolean;
+    className?: string;
+    hideNew?: boolean;
 }
 
 export const Footer: React.FC<FooterProps> = ({ className = "", hideNew = false }) => {
   return (
     <footer className={`w-full bg-white/80 backdrop-blur-md border-t border-gray-100 py-6 px-6 mt-auto z-10 ${className}`}>
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-
+        
         {/* Brand */}
         <div className="flex flex-col items-center md:items-start gap-1">
           <Link to="/" className="flex items-center gap-2 group">
@@ -26,16 +26,16 @@ export const Footer: React.FC<FooterProps> = ({ className = "", hideNew = false 
 
         {/* Navigation */}
         <nav className="flex items-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-100">
-          <Link to="/" className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold text-gray-600 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all">
-            <Home className="w-3.5 h-3.5" />
-            <span>Home</span>
-          </Link>
-          {!hideNew && (
-            <Link to="/new" className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold text-gray-600 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all">
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>New</span>
+            <Link to="/" className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold text-gray-600 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all">
+                <Home className="w-3.5 h-3.5" />
+                <span>Home</span>
             </Link>
-          )}
+            {!hideNew && (
+                <Link to="/new" className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold text-gray-600 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all">
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>New</span>
+                </Link>
+            )}
         </nav>
 
         {/* Socials */}
